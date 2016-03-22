@@ -116,7 +116,7 @@ class SMShopFrmProducts implements SMIExtensionForm
 
 	private function lowerCasePlaceHolders(SMTemplate $view)
 	{
-		$view->SetContent(preg_replace_callback("/\\{\\[(.*)\\]\\}/m", "smShopPregReplaceCallback", $view->GetContent()));
+		$view->SetContent(preg_replace_callback("/\\{\\[(.*)\\]\\}/mU", "smShopPregReplaceCallback", $view->GetContent()));
 	}
 }
 

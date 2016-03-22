@@ -3,6 +3,7 @@
 SMExtensionManager::Import("SMExtensionCommon", "SMExtensionCommon.class.php", true);
 require_once(dirname(__FILE__) . "/FrmShop.class.php");
 require_once(dirname(__FILE__) . "/FrmProducts.class.php");
+require_once(dirname(__FILE__) . "/FrmBasket.class.php");
 
 class SMShop extends SMExtension
 {
@@ -30,8 +31,18 @@ class SMShop extends SMExtension
 		$dsCallback = $basePath . SMExtensionManager::GetCallbackUrl($this->name, "Callbacks/DataSource");
 		$fsCallback = $basePath . SMExtensionManager::GetCallbackUrl($this->name, "Callbacks/Files");
 
+		$langCode = SMLanguageHandler::GetSystemLanguage();
+		$shopLang = ((SMFileSystem::FileExists(dirname(__FILE__) . "/JSShop/Languages/" . $langCode . ".js") === true) ? $langCode : "en");
+
 		$jsInit = "
 		<script type=\"text/javascript\">
+		JSShop.Settings.ShippingExpenseExpression = \"" . ((SMAttributes::GetAttribute("SMShopShippingExpenseExpression") !== null) ? SMAttributes::GetAttribute("SMShopShippingExpenseExpression") : "") . "\";
+		JSShop.Settings.ShippingExpenseVat = " . ((SMAttributes::GetAttribute("SMShopShippingExpenseVat") !== null && SMAttributes::GetAttribute("SMShopShippingExpenseVat") !== "") ? SMAttributes::GetAttribute("SMShopShippingExpenseVat") : "0") . ";
+		JSShop.Settings.ShippingExpenseMessage = \"" . ((SMAttributes::GetAttribute("SMShopShippingExpenseMessage") !== null) ? SMAttributes::GetAttribute("SMShopShippingExpenseMessage") : "") . "\";
+		JSShop.Settings.BasketUrl = \"" . SMExtensionManager::GetExtensionUrl($this->name) . "&SMShopBasket" . "\";
+
+		JSShop.Language.Name = \"" . $shopLang . "\";
+
 		JSShop.WebService.Products.Create = \"" . $dsCallback . "\";
 		JSShop.WebService.Products.Retrieve = \"" . $dsCallback . "\";
 		JSShop.WebService.Products.RetrieveAll = \"" . $dsCallback . "\";
@@ -119,26 +130,6 @@ class SMShop extends SMExtension
 		";
 
 		SMEnvironment::GetMasterTemplate()->AddToHeadSection($jsInit);
-
-		/*if ($this->smMenuExists === true)
-		{
-			if (SMMenuLinkList::GetInstance()->GetReadyState() === true)
-			{
-				$menuLinkList = SMMenuLinkList::GetInstance();
-				$menuLinkList->AddLink($this->getTranslation("LoginForm"), $this->getTranslation("Login"), SMExtensionManager::GetExtensionUrl("SMLogin"));
-				$menuLinkList->AddLink($this->getTranslation("LoginForm"), $this->getTranslation("Logout"), SMExtensionManager::GetExtensionUrl("SMLogin") . "&SMLoginFunc=logout");
-			}
-		}
-
-		if ($this->smPagesExists === true)
-		{
-			if (SMPagesLinkList::GetInstance()->GetReadyState() === true)
-			{
-				$pagesLinkList = SMPagesLinkList::GetInstance();
-				$pagesLinkList->AddLink($this->getTranslation("LoginForm"), $this->getTranslation("Login"), SMExtensionManager::GetExtensionUrl("SMLogin"));
-				$pagesLinkList->AddLink($this->getTranslation("LoginForm"), $this->getTranslation("Logout"), SMExtensionManager::GetExtensionUrl("SMLogin") . "&SMLoginFunc=logout");
-			}
-		}*/
 	}
 
 	public function Render()
@@ -149,6 +140,11 @@ class SMShop extends SMExtension
 				SMExtensionManager::ExecuteExtension(SMExtensionManager::GetDefaultExtension());
 
 			$frm = new SMShopFrmShop($this->context);
+			return $frm->Render();
+		}
+		if (SMEnvironment::GetQueryValue("SMShopBasket") !== null)
+		{
+			$frm = new SMShopFrmBasket($this->context);
 			return $frm->Render();
 		}
 		else

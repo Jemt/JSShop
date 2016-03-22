@@ -81,7 +81,7 @@ $dataSourcesAllowed = array
 		"Fields"			=> array
 		(
 			"Id"					=> array("DataType" => "string", "MaxLength" => 50*8),
-			//"State"					=> array("DataType" => "string", "MaxLength" => 20),
+			//"State"				=> array("DataType" => "string", "MaxLength" => 20),
 			"Time"					=> array("DataType" => "number", "MaxLength" => 15, "ForceInitialValue" => (string)(time() * 1000)), // Timestamp in milliseconds (compatible with JS)
 			"ClientIp"				=> array("DataType" => "string", "MaxLength" => 45, "ForceInitialValue" => $ip), // IPv4 or IPv6
 			"Company"				=> array("DataType" => "string", "MaxLength" => 50*8),
@@ -100,6 +100,12 @@ $dataSourcesAllowed = array
 			"AltCity"				=> array("DataType" => "string", "MaxLength" => 50*8),
 			"Price"					=> array("DataType" => "number", "MaxLength" => 10),
 			"Vat"					=> array("DataType" => "number", "MaxLength" => 10),
+			"Currency"				=> array("DataType" => "string", "MaxLength" => 3),
+			"Weight"				=> array("DataType" => "number", "MaxLength" => 10),
+			"WeightUnit"			=> array("DataType" => "string", "MaxLength" => 3),
+			"ShippingExpense"		=> array("DataType" => "number", "MaxLength" => 10),
+			"ShippingVat"			=> array("DataType" => "number", "MaxLength" => 10),
+			"ShippingMessage"		=> array("DataType" => "string", "MaxLength" => 250*8)
 			//"PaymentType"			=> array("DataType" => "string", "MaxLength" => 20),
 			//"TransactionId"		=> array("DataType" => "string", "MaxLength" => 100)
 		),

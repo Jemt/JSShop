@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<entries>
+	<entry key="Title" value="Webshop" />
+	<entry key="Description" value="Promover og sælg dine produkter på nettet" />
+
+	<entry key="Products" value="Produkter" />
+
+	<entry key="Overview" value="Overblik" />
+	<entry key="NoProducts" value="Ingen produkter" />
+	<entry key="Buy" value="Køb" />
+	<entry key="ReadMore" value="Læs mere" />
+
+	<entry key="Basket" value="Indkøbskurv" />
+</entries>

@@ -9,4 +9,6 @@
 	<entry key="NoProducts" value="No products" />
 	<entry key="Buy" value="Buy" />
 	<entry key="ReadMore" value="Read more" />
+
+	<entry key="Basket" value="Basket" />
 </entries>

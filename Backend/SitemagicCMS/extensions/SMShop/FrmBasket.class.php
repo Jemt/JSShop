@@ -1,6 +1,6 @@
 <?php
 
-class SMShopFrmShop implements SMIExtensionForm
+class SMShopFrmBasket implements SMIExtensionForm
 {
 	private $context;
 	private $lang;
@@ -10,7 +10,7 @@ class SMShopFrmShop implements SMIExtensionForm
 		$this->context = $context;
 		$this->lang = new SMLanguageHandler($this->context->GetExtensionName());
 
-		$this->context->GetTemplate()->ReplaceTag(new SMKeyValue("Title", $this->lang->GetTranslation("Title") . " - " . $this->lang->GetTranslation("Products")));
+		$this->context->GetTemplate()->ReplaceTag(new SMKeyValue("Title", $this->lang->GetTranslation("Basket")));
 
 		$this->createControls();
 		$this->handlePostBack();
@@ -29,6 +29,9 @@ class SMShopFrmShop implements SMIExtensionForm
 
 	public function Render()
 	{
+		$extPath = SMExtensionManager::GetExtensionPath($this->context->GetExtensionName());
+		SMEnvironment::GetMasterTemplate()->RegisterResource(SMTemplateResource::$StyleSheet, $extPath . "/JSShop/Views/Basket.css");
+
 		$output = "
 		<div id=\"" . $this->context->GetExtensionName() . "Container\"></div>
 
@@ -36,8 +39,8 @@ class SMShopFrmShop implements SMIExtensionForm
 
 		JSShop.Initialize(function()
 		{
-			var p = new JSShop.Presenters.ProductForm();
-			p.Render(document.getElementById(\"" . $this->context->GetExtensionName() . "Container\"));
+			var b = new JSShop.Presenters.Basket();
+			b.Render(document.getElementById(\"" . $this->context->GetExtensionName() . "Container\"));
 		});
 
 		</script>

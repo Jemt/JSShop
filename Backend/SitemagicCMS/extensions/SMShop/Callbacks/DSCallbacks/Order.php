@@ -41,6 +41,11 @@ function SMShopProcessNewOrder(SMKeyValueCollection $order)
 
 	$priceTotal = 0;
 	$vatTotal = 0;
+	$currency = null;
+	$weightTotal = 0;
+	$weightUnit = null;
+	$shippingExpense = 0;
+	$shippingVat = 0;
 
 	if ($eDs->GetDataSourceType() === SMDataSourceType::$Xml)
 		$eDs->Lock();
@@ -61,6 +66,26 @@ function SMShopProcessNewOrder(SMKeyValueCollection $order)
 		}
 
 		$product = $products[0];
+
+		// Make sure all products are defined with the same currency and weight unit
+
+		$currency = (($currency !== null) ? $currency : $product["Currency"]);
+
+		if ($currency !== $product["Currency"])
+		{
+			header("HTTP/1.1 500 Internal Server Error");
+			echo "Buying products with different currencies is not supported";
+			exit;
+		}
+
+		$weightUnit = (($weightUnit !== null) ? $weightUnit : $product["WeightUnit"]);
+
+		if ($weightUnit !== $product["WeightUnit"])
+		{
+			header("HTTP/1.1 500 Internal Server Error");
+			echo "Buying products with different weight units is not supported";
+			exit;
+		}
 
 		// Get discount expression
 
@@ -111,12 +136,15 @@ function SMShopProcessNewOrder(SMKeyValueCollection $order)
 				echo "DiscountExpression did not result in a valid numeric value";
 				exit;
 			}
-
-			$price = ((int)$entry["Units"] * (float)$product["Price"]) - $discount;
-
-			$priceTotal += $price;
-			$vatTotal += $price * ((float)$product["Vat"] / 100);
 		}
+
+		// Totals
+
+		$price = ((int)$entry["Units"] * (float)$product["Price"]) - $discount;
+
+		$priceTotal += $price;
+		$vatTotal += $price * ((float)$product["Vat"] / 100);
+		$weightTotal += (int)$entry["Units"] * (float)$product["Weight"];
 
 		// Update entry
 
@@ -125,18 +153,81 @@ function SMShopProcessNewOrder(SMKeyValueCollection $order)
 		$entry["Vat"] = $product["Vat"];
 		$entry["Currency"] = $product["Currency"];
 		$entry["Discount"] = (string)$discount;
-		$entry["DiscountMessage"] = $product["DiscountMessage"];
+		$entry["DiscountMessage"] = (($discount !== 0) ? $product["DiscountMessage"] : "");
 
 		$eDs->Update($entry, "Id = '" . $eDs->Escape($entry["Id"]) . "'");
 	}
 
 	$eDs->Commit();
 
+	// Calculate shipping expense
+
+	$shippingExpenseExpression = SMAttributes::GetAttribute("SMShopShippingExpenseExpression");
+	$shippingExpenseVatPercentage = SMAttributes::GetAttribute("SMShopShippingExpenseVat");
+	$shippingExpenseMessage = SMAttributes::GetAttribute("SMShopShippingExpenseMessage");
+
+	if ($shippingExpenseExpression !== null && $shippingExpenseExpression !== "")
+	{
+		// Security validation
+
+		$shippingExpenseExpression = preg_replace("/ |[0-9]|\\*|\\+|\\-|\\/|=|&|\\||!|\\.|:|\\(|\\)|>|<|\\?|true|false/", "", $shippingExpenseExpression);
+		$shippingExpenseExpression = preg_replace("/price|vat|currency|weight|weightunit/", "", $shippingExpenseExpression);
+
+		if ($shippingExpenseExpression !== "") // All valid elements were removed above, so if $shippingExpenseExpression contains anything, it is potentially a security threat
+		{
+			header("HTTP/1.1 500 Internal Server Error");
+			echo "Invalid and potentially insecure ShippingExpenseExpression detected";
+			exit;
+		}
+
+		// Make variables available to discount expression
+
+		$expr = "";
+		$expr .= "\nprice = " . $priceTotal . ";";
+		$expr .= "\nvat = " . $vatTotal . ";";
+		$expr .= "\ncurrency = \"" . $currency . "\";";
+		$expr .= "\nweight = " . $weightTotal . ";";
+		$expr .= "\nweightunit = \"" . $weightUnit . "\";";
+		$expr .= "\nreturn (" . SMAttributes::GetAttribute("SMShopShippingExpenseExpression") . ");";
+
+		// Turn JS variables into PHP compliant variables
+
+		$expr = str_replace("price", "\$price", $expr);
+		$expr = str_replace("vat", "\$vat", $expr);
+		$expr = str_replace("currency", "\$currency", $expr);
+		$expr = str_replace("weight", "\$weight", $expr); // $weight AND $weightunit (both starts with "weight")
+
+		// Evaluate shipping expense expression
+
+		$shippingExpense = eval($expr);
+
+		if (is_numeric($shippingExpense) === false)
+		{
+			header("HTTP/1.1 500 Internal Server Error");
+			echo "ShippingExpenseExpression did not result in a valid numeric value";
+			exit;
+		}
+
+		$priceTotal += $shippingExpense;
+
+		if ($shippingExpenseVatPercentage !== null && $shippingExpenseVatPercentage !== "")
+		{
+			$shippingVat = $shippingExpense * ((float)$shippingExpenseVatPercentage / 100);
+			$vatTotal += $shippingVat;
+		}
+	}
+
 	// Update order details
 
 	$order["Id"] = (string)$orderId;
 	$order["Price"] = (string)$priceTotal;
 	$order["Vat"] = (string)$vatTotal;
+	$order["Currency"] = $currency;
+	$order["Weight"] = (string)$weight;
+	$order["WeightUnit"] = $weightUnit;
+	$order["ShippingExpense"] = (string)$shippingExpense;
+	$order["ShippingVat"] = (string)$shippingVat;
+	$order["ShippingMessage"] = (($shippingExpenseMessage !== null) ? $shippingExpenseMessage : "");
 }
 
 ?>
