@@ -510,6 +510,32 @@ Fit.Validation.ExpectTypeArray = function(val, typeValCallback, allowNotSet)
 	});
 }
 
+/// <function container="Fit.Validation" name="ExpectInstanceArray" access="public" static="true">
+/// 	<description>
+/// 		Throws error if passed object is not an instance of Array
+/// 		contaning only instances of specified type. Example:
+/// 		Fit.Validation.ExpectInstanceArray(arr, Fit.Controls.TreeView.Node)
+/// 	</description>
+/// 	<param name="val" type="object"> Object to validate </param>
+/// 	<param name="instanceType" type="object"> Instance type (constructor, e.g. Fit.Http.Request) </param>
+/// 	<param name="allowNotSet" type="boolean" default="false"> Set True to allow object to be Null or Undefined </param>
+/// </function>
+Fit.Validation.ExpectInstanceArray = function(val, instanceType, allowNotSet)
+{
+	if (allowNotSet === true && (val === undefined || val === null))
+		return;
+
+	if ((val instanceof Array) === false)
+		Fit.Validation.ThrowError("Value '" + val + "' is not an instance of Array");
+
+	// Validate types within array
+
+	Fit.Array.ForEach(val, function(v)
+	{
+		Fit.Validation.ExpectInstance(v, instanceType);
+	});
+}
+
 /// <function container="Fit.Validation" name="ExpectCollection" access="public" static="true">
 /// 	<description> Throws error if passed object is not a collection that can be iterated </description>
 /// 	<param name="val" type="object"> Object to validate </param>
@@ -673,12 +699,25 @@ Fit.Validation.IsSet = function(obj)
 Fit.Validation.ThrowError = function(msg)
 {
 	if (Fit._internal.Validation.DebugMode === true)
-		alert("ThrowError: " + msg);
+	{
+		var stackTrace = Fit.Validation.GetStackTrace();
+		alert("ThrowError: " + msg + ((stackTrace !== "") ? "\n\n" : "") + stackTrace);
+	}
 
 	if (window.console && console.trace)
 		console.trace();
 
 	throw new Error(msg); // Never change this behaviour - we should always re-throw the error to terminate execution
+}
+
+Fit.Validation.GetStackTrace = function()
+{
+	if (window.Error === undefined || Error.captureStackTrace === undefined)
+		return "";
+
+	var obj = {};
+	Error.captureStackTrace(obj, Fit.Validation.GetStackTrace);
+	return obj.stack;
 }
 
 // ==========================================================
@@ -1163,6 +1202,37 @@ Fit.Browser.GetVersion = function()
 	return -1;
 }
 
+/// <function container="Fit.Browser" name="GetQueryString" access="public" static="true" returns="object">
+/// 	<description>
+/// 		Returns query string object contain the following properties:
+/// 		 - Url:string (Full URL)
+/// 		 - Parameters:object (associative object array with URL parameters as keys)
+/// 		 - Anchor:string (anchor if set, otherwise Null)
+/// 	</description>
+/// </function>
+Fit.Browser.GetQueryString = function()
+{
+	var qs = { Url: null, Parameters: {}, Anchor: null };
+
+	var url = location.href;
+	var params = ((url.indexOf("?") > -1) ? url.split("?")[1] : "");
+	var anchor = null;
+
+	params = ((params.indexOf("#") > -1) ? params.split("#")[0] : params);
+	anchor = ((url.indexOf("#") > -1) ? url.split("#")[1] : null);
+
+	qs.Url = url;
+	qs.Anchor = anchor;
+
+	Fit.Array.ForEach(((params !== "") ? params.split("&") : []), function(p)
+	{
+		var keyval = p.split("=");
+		qs.Parameters[keyval[0]] = ((keyval.length > 1) ? decodeURIComponent(keyval[1]) : "");
+	});
+
+	return qs;
+}
+
 /// <function container="Fit.Browser" name="GetLanguage" access="public" static="true" returns="string">
 /// 	<description> Returns browser language - e.g. &quot;da&quot; (Danish), &quot;en&quot; (English) etc. </description>
 /// </function>
@@ -1438,7 +1508,7 @@ Fit.Controls.ControlBase = function(controlId)
 		container.style.width = width.Value + width.Unit;
 		Fit.Dom.AddClass(container, "FitUiControl");
 
-		me._internal.Data("active", "false");
+		me._internal.Data("focused", "false");
 
 		// Add hidden inputs which are automatically populated with
 		// control value and state information when control is updated.
@@ -1860,7 +1930,7 @@ Fit.Controls.ControlBase = function(controlId)
 
 		this._internal.FireOnFocus = function()
 		{
-			me._internal.Data("active", "true");
+			me._internal.Data("focused", "true");
 
 			Fit.Array.ForEach(onFocusHandlers, function(cb)
 			{
@@ -1870,7 +1940,7 @@ Fit.Controls.ControlBase = function(controlId)
 
 		this._internal.FireOnBlur = function()
 		{
-			me._internal.Data("active", "false");
+			me._internal.Data("focused", "false");
 
 			Fit.Array.ForEach(onBlurHandlers, function(cb)
 			{
@@ -2128,12 +2198,11 @@ Fit.Data.CreateGuid = function(dashFormat)
 	Fit.Validation.ExpectBoolean(dashFormat, true);
 
 	/*
-	// Test case proving that unique GUIDs are created every time.
+	// Test case proving that unique GUIDs are generated every time.
 	// Use a powerful computer to run this test, and a fast browser (e.g. Safari).
 
 	var guids = {};
 	var minors = 0;
-	var majors = 0;
 
 	for (var i = 0 ; i < 25000000 ; i++) // 25 million
 	{
@@ -2142,8 +2211,6 @@ Fit.Data.CreateGuid = function(dashFormat)
 		minors++;
 		if (minors === 5000)
 		{
-			majors++;
-
 			console.log("5000 more GUIDs generated");
 			minors = 0;
 		}
@@ -2157,7 +2224,8 @@ Fit.Data.CreateGuid = function(dashFormat)
 		{
 			guids[g] = 1;
 		}
-	}*/
+	}
+	*/
 
 	var chars = "0123456789abcdef".split("");
 
@@ -2185,6 +2253,47 @@ Fit.Data.CreateGuid = function(dashFormat)
 
 	return uuid.join("");
 }
+
+
+// =====================================
+// Math
+// =====================================
+
+Fit.Math = {};
+
+Fit.Math.Round = function(value, precision)
+{
+	Fit.Validation.ExpectNumber(value);
+	Fit.Validation.ExpectInteger(precision, true);
+
+	var decimals = ((Fit.Validation.IsSet(precision) === true) ? precision : 0);
+
+    var factor = 1;
+    for (var i = 0 ; i < decimals ; i++) factor = factor * 10;
+    var res = Math.round(value * factor) / factor;
+
+	return res;
+}
+
+Fit.Math.Format = function(value, decimals, decimalSeparator)
+{
+	Fit.Validation.ExpectNumber(value);
+	Fit.Validation.ExpectInteger(decimals, true);
+	Fit.Validation.ExpectString(decimalSeparator, true);
+
+	var res = Fit.Math.Round(value, decimals);
+
+    if (decimals <= 0)
+        return res.toString();
+
+    var str = ((res % 1 === 0) ? res.toString() + ".0" : res.toString());
+	
+    for (var i = str.split(".")[1].length ; i < decimals ; i++)
+        str += "0";
+
+    return ((Fit.Validation.IsSet(decimalSeparator) === true) ? str.replace(".", decimalSeparator) : str);
+}
+
 
 // =====================================
 // String
@@ -3574,8 +3683,8 @@ Fit.Events.GetPointerState = function()
 
 Fit._internal.Events = {};
 Fit._internal.Events.Browser = Fit.Browser.GetInfo();
-Fit._internal.Events.KeysDown = { Shift: false, Ctrl: false, Alt: false, Meta: false };
-Fit._internal.Events.Mouse = { Buttons: { Primary: false, Secondary: false }, Coordinates: { ViewPort: { X: -1, Y: -1 }, Document: { X: -1, Y: -1 } } };
+Fit._internal.Events.KeysDown = { Shift: false, Ctrl: false, Alt: false, Meta: false, KeyDown: -1, KeyUp: -1 };
+Fit._internal.Events.Mouse = { Buttons: { Primary: false, Secondary: false, Touch: false }, Coordinates: { ViewPort: { X: -1, Y: -1 }, Document: { X: -1, Y: -1 } } };
 Fit._internal.Events.OnReadyHandlers = [];
 
 // ==============================================
@@ -3594,6 +3703,8 @@ Fit.Events.AddHandler(document, "keydown", true, function(e)
 	Fit._internal.Events.KeysDown.Ctrl = ev.ctrlKey;
 	Fit._internal.Events.KeysDown.Alt = ev.altKey;
 	Fit._internal.Events.KeysDown.Meta = ev.metaKey;
+	Fit._internal.Events.KeysDown.KeyUp = -1;
+	Fit._internal.Events.KeysDown.KeyDown = ev.keyCode;
 });
 Fit.Events.AddHandler(document, "keyup", true, function(e)
 {
@@ -3603,10 +3714,12 @@ Fit.Events.AddHandler(document, "keyup", true, function(e)
 	Fit._internal.Events.KeysDown.Ctrl = ev.ctrlKey;
 	Fit._internal.Events.KeysDown.Alt = ev.altKey;
 	Fit._internal.Events.KeysDown.Meta = ev.metaKey;
+	Fit._internal.Events.KeysDown.KeyUp = ev.keyCode;
+	Fit._internal.Events.KeysDown.KeyDown = -1;
 });
 
 // ==============================================
-// Mouse tracking
+// Mouse and touch tracking
 // ==============================================
 
 // Using event capturing to make sure event is registered before target is reached.
@@ -3667,6 +3780,56 @@ Fit.Events.AddHandler(document, "mousemove", function(e)
 	Fit._internal.Events.Mouse.Coordinates.ViewPort.Y = Math.floor(ev.clientY);
 
 	// Mouse position in document which may have been scrolled
+	var scrollPos = Fit.Dom.GetScrollPosition(document.body); // Object with integer values returned
+	Fit._internal.Events.Mouse.Coordinates.Document.X = Fit._internal.Events.Mouse.Coordinates.ViewPort.X + scrollPos.X;
+	Fit._internal.Events.Mouse.Coordinates.Document.Y = Fit._internal.Events.Mouse.Coordinates.ViewPort.Y + scrollPos.Y;
+});
+Fit.Events.AddHandler(document, "touchstart", true, function(e)
+{
+	var ev = Fit.Events.GetEvent(e);
+
+	Fit._internal.Events.Mouse.Buttons.Touch = true;
+
+	// Touch position in viewport
+	Fit._internal.Events.Mouse.Coordinates.ViewPort.X = Math.floor(ev.touches[0].clientX);
+	Fit._internal.Events.Mouse.Coordinates.ViewPort.Y = Math.floor(ev.touches[0].clientY);
+
+	// Touch position in document which may have been scrolled
+	var scrollPos = Fit.Dom.GetScrollPosition(document.body); // Object with integer values returned
+	Fit._internal.Events.Mouse.Coordinates.Document.X = Fit._internal.Events.Mouse.Coordinates.ViewPort.X + scrollPos.X;
+	Fit._internal.Events.Mouse.Coordinates.Document.Y = Fit._internal.Events.Mouse.Coordinates.ViewPort.Y + scrollPos.Y;
+});
+Fit.Events.AddHandler(document, "touchend", true, function(e)
+{
+	var ev = Fit.Events.GetEvent(e);
+
+	Fit._internal.Events.Mouse.Buttons.Touch = false;
+
+	/*Fit._internal.Events.Mouse.Coordinates.ViewPort.X = -1;
+	Fit._internal.Events.Mouse.Coordinates.ViewPort.Y = -1;
+	Fit._internal.Events.Mouse.Coordinates.Document.X = -1;
+	Fit._internal.Events.Mouse.Coordinates.Document.Y = -1;*/
+});
+Fit.Events.AddHandler(document, "touchcancel", true, function(e)
+{
+	var ev = Fit.Events.GetEvent(e);
+
+	Fit._internal.Events.Mouse.Buttons.Touch = false;
+
+	/*Fit._internal.Events.Mouse.Coordinates.ViewPort.X = -1;
+	Fit._internal.Events.Mouse.Coordinates.ViewPort.Y = -1;
+	Fit._internal.Events.Mouse.Coordinates.Document.X = -1;
+	Fit._internal.Events.Mouse.Coordinates.Document.Y = -1;*/
+});
+Fit.Events.AddHandler(document, "touchmove", function(e)
+{
+	var ev = Fit.Events.GetEvent(e);
+
+	// Touch position in viewport
+	Fit._internal.Events.Mouse.Coordinates.ViewPort.X = Math.floor(ev.touches[0].clientX);
+	Fit._internal.Events.Mouse.Coordinates.ViewPort.Y = Math.floor(ev.touches[0].clientY);
+
+	// Touch position in document which may have been scrolled
 	var scrollPos = Fit.Dom.GetScrollPosition(document.body); // Object with integer values returned
 	Fit._internal.Events.Mouse.Coordinates.Document.X = Fit._internal.Events.Mouse.Coordinates.ViewPort.X + scrollPos.X;
 	Fit._internal.Events.Mouse.Coordinates.Document.Y = Fit._internal.Events.Mouse.Coordinates.ViewPort.Y + scrollPos.Y;
@@ -4343,10 +4506,20 @@ Fit.Language = {};
 Fit.Language.Translations = {};
 
 // Simply override translation object to change language
+
+// ControlBase
 Fit.Language.Translations.Required = "Field is required";
+
+// DropDown
 Fit.Language.Translations.InvalidSelection = "Invalid selection";
+
+// FilePicker
 Fit.Language.Translations.SelectFile = "Select file";
 Fit.Language.Translations.SelectFiles = "Select file(s)";
+
+// Dialog
+Fit.Language.Translations.Ok = "OK";
+Fit.Language.Translations.Cancel = "Cancel";
 // The order of processing scripts and stylesheets:
 // http://www.html5rocks.com/en/tutorials/internals/howbrowserswork/#The_order_of_processing_scripts_and_style_sheets
 
@@ -4677,7 +4850,7 @@ Fit.Loader.LoadStyleSheets = function(cfg, callback)
 /// <function container="Fit.Controls.Button" name="Button" access="public">
 /// 	<description> Create instance of Button control </description>
 /// 	<param name="controlId" type="string" default="undefined">
-/// 		Unique control ID. if specified, control will be
+/// 		Unique control ID. If specified, control will be
 /// 		accessible using the Fit.Controls.Find(..) function.
 /// 	</param>
 /// </function>
@@ -4716,13 +4889,7 @@ Fit.Controls.Button = function(controlId)
 
 		Fit.Events.AddHandler(element, "click", function(e)
 		{
-			if (me.Enabled() === true)
-			{
-				Fit.Array.ForEach(onClickHandlers, function(handler)
-				{
-					handler(me);
-				});
-			}
+			me.Click();
 		});
 		Fit.Events.AddHandler(element, "keydown", function(e)
 		{
@@ -4730,7 +4897,7 @@ Fit.Controls.Button = function(controlId)
 
 			if (ev.keyCode === 13 || ev.keyCode === 32) // Enter or Spacebar
 			{
-				element.click(null);
+				me.Click();
 				Fit.Events.PreventDefault(ev);
 			}
 		});
@@ -4832,6 +4999,25 @@ Fit.Controls.Button = function(controlId)
 		return (Fit.Dom.Data(element, "enabled") === "true");
 	}
 
+	/// <function container="Fit.Controls.Button" name="Focused" access="public" returns="boolean">
+	/// 	<description> Get/set value indicating whether control has focus </description>
+	/// 	<param name="value" type="boolean" default="undefined"> If defined, True assigns focus, False removes focus (blur) </param>
+	/// </function>
+	this.Focused = function(focus)
+	{
+		Fit.Validation.ExpectBoolean(focus, true);
+
+		if (Fit.Validation.IsSet(focus) === true)
+		{
+			if (focus === true)
+				element.focus();
+			else
+				element.blur();
+		}
+
+		return (document.activeElement === element);
+	}
+
 	/// <function container="Fit.Controls.Button" name="Width" access="public" returns="object">
 	/// 	<description> Get/set control width - returns object with Value and Unit properties </description>
 	/// 	<param name="val" type="number" default="undefined"> If defined, control width is updated to specified value. A value of -1 resets control width. </param>
@@ -4902,6 +5088,20 @@ Fit.Controls.Button = function(controlId)
 	{
 		Fit.Validation.ExpectFunction(cb);
 		Fit.Array.Add(onClickHandlers, cb);
+	}
+
+	/// <function container="Fit.Controls.Button" name="Click" access="public">
+	/// 	<description> Programmatically trigger a button click </description>
+	/// </function>
+	this.Click = function()
+	{
+		if (me.Enabled() === true)
+		{
+			Fit.Array.ForEach(onClickHandlers, function(handler)
+			{
+				handler(me);
+			});
+		}
 	}
 
 	/// <function container="Fit.Controls.Button" name="GetDomElement" access="public" returns="DOMElement">
@@ -4990,6 +5190,8 @@ Fit.Controls.ContextMenu = function()
 	var me = this;
 	var tree = new Fit.Controls.TreeView("ContextMenuTreeView_" + Fit.Data.CreateGuid());
 	var prevFocused = null;
+	var detectBoundaries = true;
+	var highlightOnInitKeyStroke = true;
 
 	var onShowing = [];
 	var onShown = [];
@@ -5002,11 +5204,16 @@ Fit.Controls.ContextMenu = function()
 
 	function init()
 	{
-		//tree.RemoveCssClass("FitUiControlTreeView");
+		Fit.Dom.Data(tree.GetDomElement(), "keynav", "false");				// True when navigating using keyboard
+		Fit.Dom.Data(tree.GetDomElement(), "sticky", "false");				// True when user toggles node
+		Fit.Dom.Data(tree.GetDomElement(), "viewportcollision", "false");	// True when context menu collides with viewport boundaries
+
 		tree.AddCssClass("FitUiControlContextMenu");
 		tree.Selectable(true);
 
-		// Allow context menu to be closed using ESC key
+		// Custom keyboard navigation
+
+		tree.KeyboardNavigation(false);
 
 		Fit.Events.AddHandler(tree.GetDomElement(), "keydown", function(e)
 		{
@@ -5014,7 +5221,6 @@ Fit.Controls.ContextMenu = function()
 
 			if (ev.keyCode === 27) // Escape
 			{
-				// Hide context menu
 				me.Hide();
 
 				// Return focus to previously focused element
@@ -5023,6 +5229,88 @@ Fit.Controls.ContextMenu = function()
 					prevFocused.focus();
 					prevFocused = null;
 				}
+
+				return;
+			}
+
+			var node = tree.GetNodeFocused();
+
+			if (node === null) // In case context menu has no children
+				return;
+
+			if (highlightOnInitKeyStroke === true)
+			{
+				highlightOnInitKeyStroke = false;
+				Fit.Dom.Data(tree.GetDomElement(), "keynav", "true"); // Requires repaint in Legacy IE
+				repaint();
+
+				// Make sure the first item is highlighted instead of
+				// the 2nd item, in case initial keystroke was arrow down.
+
+				if (ev.keyCode === 40 && tree.GetChildren().length > 0)
+				{
+					tree.GetChildren()[0].Focused(true);
+
+					Fit.Events.PreventDefault(ev); // Prevent scrolling
+					return;
+				}
+			}
+
+			if (ev.keyCode === 37) // Arrow left
+			{
+				if (node.Expanded() === true)
+				{
+					node.Expanded(false);
+				}
+				else if (node.GetParent() !== null)
+				{
+					node.GetParent().Focused(true);
+				}
+
+				Fit.Events.PreventDefault(ev); // Prevent scrolling
+				return;
+			}
+
+			if (ev.keyCode === 39) // Arrow right
+			{
+				if (node.GetChildren().length > 0)
+				{
+					node.Expanded(true);
+					node.GetChildren()[0].Focused(true);
+				}
+
+				Fit.Events.PreventDefault(ev); // Prevent scrolling
+				return;
+			}
+
+			if (ev.keyCode === 38) // Arrow up
+			{
+				var newNode = tree.GetNodeAbove(node);
+
+				if (newNode !== null)
+					newNode.Focused(true);
+
+				Fit.Events.PreventDefault(ev); // Prevent scrolling
+				return;
+			}
+
+			if (ev.keyCode === 40) // Arrow down
+			{
+				var newNode = tree.GetNodeBelow(node);
+
+				if (newNode !== null)
+					newNode.Focused(true);
+
+				Fit.Events.PreventDefault(ev); // Prevent scrolling
+				return;
+			}
+
+			if (ev.keyCode === 13) // Enter
+			{
+				if (node.Selectable() === true)
+					node.Selected(true);
+
+				return;
 			}
 		});
 
@@ -5030,12 +5318,90 @@ Fit.Controls.ContextMenu = function()
 
 		tree.OnSelected(function(sender, node)
 		{
-			if (node.Selected() === false) // Another node may have been selected without navigating away - skip this event for deselected node when new selection is made
-				return;
+			if (node.Selected() === true) // OnSelected fires when both selecting and deselecting nodes
+			{
+				node.Selected(false); // Notice: Fires OnSelected again
+				node.Expanded(!node.Expanded());
 
-			fireEventHandlers(onSelect, node.GetDomElement()._internal.ContextMenuItem);
+				// Navigate link contained in item, or fire ContextMenu.OnSelect
 
-			me.Hide();
+				var links = node.GetDomElement().getElementsByTagName("a");
+
+				if (links.length === 1 && Fit.Dom.GetParentOfType(links[0], "li") === node.GetDomElement())
+				{
+					links[0].click();
+					me.Hide();
+				}
+				else
+				{
+					fireEventHandlers(onSelect, node.GetDomElement()._internal.ContextMenuItem);
+				}
+			}
+		});
+
+		// Support for sticky nodes
+
+		tree.OnToggled(function(sender, node)
+		{
+			if (node.Expanded() === false) // Node collapsed
+			{
+				// Collapse all children
+				Fit.Array.ForEach(node.GetChildren(), function(c)
+				{
+					c.Expanded(false); // Notice: Fires OnToggled again if node is expanded, causing all children to be collapsed recursively
+				});
+			}
+			else // Node expanded
+			{
+				if (node.Focused() === true) // Prevent this from executing when recursively expanding parent nodes (see further down)
+				{
+					Fit.Dom.Data(tree.GetDomElement(), "sticky", "true");
+					highlightOnInitKeyStroke = false;
+
+					// Collapse previously expanded nodes
+
+					var expanded = null;
+					var currentNode = node;
+
+					while (currentNode !== null)
+					{
+						if (currentNode.GetParent() !== null)
+							expanded = getExpandedChild(currentNode.GetParent().GetChildren(), currentNode);
+						else
+							expanded = getExpandedChild(tree.GetChildren(), currentNode);
+
+						if (expanded !== null)
+						{
+							expanded.Expanded(false); // Notice: Fires OnToggled again, causing all children to be collapsed recursively
+							break;
+						}
+
+						currentNode = currentNode.GetParent();
+					}
+				}
+
+				// Expand parent nodes to make the currently hovered hierarchy/path sticky
+				if (node.GetParent() !== null)
+					node.GetParent().Expanded(true); // Notice: Fires OnToggled again causing all parents to expand recursively
+
+				// Boundary detection - detect and handle viewport collisions
+				if (detectBoundaries === true)
+					handleViewPortCollision(node.GetDomElement());
+			}
+		});
+
+		// Boundary detection - detect and handle viewport collisions when hovering items to open submenus
+
+		Fit.Events.AddHandler(tree.GetDomElement(), "mouseover", function(e)
+		{
+			if (detectBoundaries === true && Fit.Dom.Data(tree.GetDomElement(), "sticky") === "false") // Viewport collision is handled by OnToggled handler when items are sticky
+			{
+				var elm = Fit.Events.GetTarget(e);
+				elm = ((elm.tagName === "LI") ? elm : Fit.Dom.GetParentOfType(elm, "li")); // Null if user is hovering context menu border or any margin/padding applied to context menu container
+
+				if (elm !== null)
+					handleViewPortCollision(elm);
+			}
 		});
 
 		// Contain clicks - prevents e.g. drop down from closing when context menu is used within picker control
@@ -5092,7 +5458,21 @@ Fit.Controls.ContextMenu = function()
 			Fit._internal.ContextMenu.Current = me;
 		}
 
-		// Focus context menu
+		// Boundary detection
+
+		if (detectBoundaries === true)
+		{
+			var treeElm = tree.GetDomElement();
+			Fit.Dom.Data(treeElm, "viewportcollision", "false");
+
+			if (Fit.Browser.GetViewPortDimensions().Height < (posY - Fit.Dom.GetScrollPosition(document.body).Y) + treeElm.offsetHeight)
+			{
+				Fit.Dom.Data(treeElm, "viewportcollision", "true");
+				treeElm.style.top = (posY - treeElm.offsetHeight) + "px";
+			}
+		}
+
+		// Focus context menu to allow keyboard navigation
 
 		me.Focused(true);
 
@@ -5110,7 +5490,47 @@ Fit.Controls.ContextMenu = function()
 		{
 			Fit.Dom.Remove(tree.GetDomElement());
 			fireEventHandlers(onHide);
+
+			Fit.Array.ForEach(tree.GetChildren(), function(n) // OnToggled handler makes sure to collapse nodes recursively
+			{
+				n.Expanded(false);
+			});
+
+			highlightOnInitKeyStroke = true;
+			Fit.Dom.Data(tree.GetDomElement(), "keynav", "false");
+			Fit.Dom.Data(tree.GetDomElement(), "viewportcollision", "false");
+			Fit.Dom.Data(tree.GetDomElement(), "sticky", "false");
+
+			Fit.Array.ForEach(tree.GetDomElement().getElementsByTagName("ul"), function(ul)
+			{
+				Fit.Dom.Data(ul, "viewportcollision", null);
+			});
 		}
+	}
+
+	/// <function container="Fit.Controls.ContextMenu" name="DetectBoundaries" access="public" returns="boolean">
+	/// 	<description> Get/set value indicating whether boundary/collision detection is enabled or not </description>
+	/// </function>
+	this.DetectBoundaries = function(val)
+	{
+		Fit.Validation.ExpectBoolean(val, true);
+
+		if (Fit.Validation.IsSet(val) === true)
+		{
+			if (val === false)
+			{
+				Fit.Dom.Data(tree.GetDomElement(), "viewportcollision", "false");
+
+				Fit.Array.ForEach(tree.GetDomElement().getElementsByTagName("ul"), function(ul)
+				{
+					Fit.Dom.Data(ul, "viewportcollision", null);
+				});
+			}
+
+			detectBoundaries = val;
+		}
+
+		return detectBoundaries;
 	}
 
 	/// <function container="Fit.Controls.ContextMenu" name="IsVisible" access="public" returns="boolean">
@@ -5191,6 +5611,21 @@ Fit.Controls.ContextMenu = function()
 		var items = [];
 
 		Fit.Array.ForEach(tree.GetChildren(), function(tvNode)
+		{
+			Fit.Array.Add(items, tvNode.GetDomElement()._internal.ContextMenuItem);
+		});
+
+		return items;
+	}
+
+	/// <function container="Fit.Controls.ContextMenu" name="GetAllChildren" access="public" returns="Fit.Controls.ContextMenu.Item[]">
+	/// 	<description> Get all children across entire hierarchy in a flat collection </description>
+	/// </function>
+	this.GetAllChildren = function()
+	{
+		var items = [];
+
+		Fit.Array.ForEach(tree.GetAllNodes(), function(tvNode)
 		{
 			Fit.Array.Add(items, tvNode.GetDomElement()._internal.ContextMenuItem);
 		});
@@ -5317,6 +5752,73 @@ Fit.Controls.ContextMenu = function()
 		return !cancel;
 	}
 
+	function getExpandedChild(children, childToIgnore)
+	{
+		Fit.Validation.ExpectInstanceArray(children, Fit.Controls.TreeView.Node);
+		Fit.Validation.ExpectInstance(childToIgnore, Fit.Controls.TreeView.Node);
+
+		var found = null;
+
+		Fit.Array.ForEach(children, function(c)
+		{
+			if (c.Expanded() === true && c !== childToIgnore)
+			{
+				found = c;
+				return false; // Break loop
+			}
+		});
+
+		return found;
+	}
+
+	function handleViewPortCollision(nodeElm)
+	{
+		Fit.Validation.ExpectDomElement(nodeElm);
+
+		if (nodeElm.getElementsByTagName("ul").length > 0)
+		{
+			var ul = nodeElm.getElementsByTagName("ul")[0];
+			Fit.Dom.Data(ul, "viewportcollision", null); // Requires repaint in Legacy IE
+
+			repaint(function()
+			{
+				var pos = Fit.Dom.GetPosition(ul, true);
+
+				if (Fit.Browser.GetViewPortDimensions().Height < pos.Y + ul.offsetHeight)
+					Fit.Dom.Data(ul, "viewportcollision", "true");
+			});
+		}
+	}
+
+	var isIe8 = (Fit.Browser.GetInfo().Name === "MSIE" && Fit.Browser.GetInfo().Version === 8);
+	function repaint(f)
+	{
+		Fit.Validation.ExpectFunction(f, true);
+
+		var cb = ((Fit.Validation.IsSet(f) === true) ? f : function() {});
+
+		if (isIe8 === false)
+		{
+			cb();
+		}
+		else
+		{
+			// Flickering may occure on IE8 when updating UI over time
+			// (UI update + JS thread released + UI updates again "later").
+
+			Fit.Dom.AddClass(tree.GetDomElement(), "FitUi_Non_Existing_ContextMenu_Class");
+			Fit.Dom.RemoveClass(tree.GetDomElement(), "FitUi_Non_Existing_ContextMenu_Class");
+
+			setTimeout(function()
+			{
+				cb();
+
+				Fit.Dom.AddClass(tree.GetDomElement(), "FitUi_Non_Existing_ContextMenu_Class");
+				Fit.Dom.RemoveClass(tree.GetDomElement(), "FitUi_Non_Existing_ContextMenu_Class");
+			}, 0);
+		}
+	}
+
 	init();
 }
 
@@ -5346,7 +5848,7 @@ Fit.Controls.ContextMenu.Item = function(displayTitle, itemValue)
 	// Public
 	// ============================================
 
-	/// <function container="Fit.Controls.ContextMenu.Node" name="Title" access="public" returns="string">
+	/// <function container="Fit.Controls.ContextMenu.Item" name="Title" access="public" returns="string">
 	/// 	<description> Get/set item title </description>
 	/// 	<param name="val" type="string" default="undefined"> If defined, item title is updated </param>
 	/// </function>
@@ -5356,7 +5858,7 @@ Fit.Controls.ContextMenu.Item = function(displayTitle, itemValue)
 		return node.Title(val);
 	}
 
-	/// <function container="Fit.Controls.ContextMenu.Node" name="Value" access="public" returns="string">
+	/// <function container="Fit.Controls.ContextMenu.Item" name="Value" access="public" returns="string">
 	/// 	<description> Get item value </description>
 	/// </function>
 	this.Value = function()
@@ -5439,6 +5941,15 @@ Fit.Controls.ContextMenu.Item = function(displayTitle, itemValue)
 		});
 
 		return items;
+	}
+
+	/// <function container="Fit.Controls.ContextMenu.Item" name="GetParent" access="public" returns="Fit.Controls.ContextMenu.Item">
+	/// 	<description> Get parent item - returns Null for a root item </description>
+	/// </function>
+	this.GetParent = function()
+	{
+		var parent = node.GetParent();
+		return ((parent !== null) ? parent.GetDomElement()._internal.ContextMenuItem : null);
 	}
 
 	/// <function container="Fit.Controls.ContextMenu.Item" name="Dispose" access="public">
@@ -5560,7 +6071,21 @@ Fit.Controls.WSContextMenu = function()
 				Fit._internal.ContextMenu.Current = me;
 			}
 
-			// Focus context menu
+			// Boundary detection
+
+			if (me.DetectBoundaries() === true)
+			{
+				var treeElm = me.GetDomElement();
+				Fit.Dom.Data(treeElm, "viewportcollision", "false");
+
+				if (Fit.Browser.GetViewPortDimensions().Height < (posY - Fit.Dom.GetScrollPosition(document.body).Y) + treeElm.offsetHeight)
+				{
+					Fit.Dom.Data(treeElm, "viewportcollision", "true");
+					treeElm.style.top = (posY - treeElm.offsetHeight) + "px";
+				}
+			}
+
+			// Focus context menu to allow keyboard navigation
 
 			me.Focused(true);
 
@@ -5766,6 +6291,51 @@ Fit.Controls.Dialog = function()
 
 		buttons = document.createElement("div");
 		Fit.Dom.Add(dialog, buttons);
+
+		layer = document.createElement("div");
+		Fit.Dom.AddClass(layer, "FitUiControlDialogModalLayer");
+
+		// Keep tab navigation within modal dialog
+
+		Fit.Events.AddHandler(dialog, "keydown", function(e)
+		{
+			var ev = Fit.Events.GetEvent(e);
+			var key = Fit.Events.GetModifierKeys();
+
+			if (modal === true && buttons.children.length > 0 && ev.keyCode === 9) // Tab key
+			{
+				var buttonFocused = document.activeElement;
+
+				if (ev.shiftKey === false)
+				{
+					if (buttonFocused === buttons.children[buttons.children.length - 1])
+					{
+						buttons.children[0].focus();
+						Fit.Events.PreventDefault(ev);
+					}
+				}
+				else
+				{
+					if (buttonFocused === buttons.children[0])
+					{
+						buttons.children[buttons.children.length - 1].focus();
+						Fit.Events.PreventDefault(ev);
+					}
+				}
+			}
+		});
+
+		Fit.Events.AddHandler(dialog, "click", function(e)
+		{
+			if (buttons.children.length > 0 && (document.activeElement === null || Fit.Dom.Contained(dialog, document.activeElement) === false))
+				buttons.children[0].focus();
+		});
+
+		Fit.Events.AddHandler(layer, "click", function(e)
+		{
+			if (buttons.children.length > 0 && (document.activeElement === null || Fit.Dom.Contained(dialog, document.activeElement) === false))
+				buttons.children[0].focus();
+		});
 	}
 
 	// ============================================
@@ -5807,11 +6377,7 @@ Fit.Controls.Dialog = function()
 		Fit.Dom.Add(document.body, dialog);
 
 		if (modal === true)
-		{
-			layer = document.createElement("div");
-			Fit.Dom.AddClass(layer, "FitUiControlDialogModalLayer");
 			Fit.Dom.Add(document.body, layer);
-		}
 	}
 
 	this.Close = function()
@@ -5819,10 +6385,7 @@ Fit.Controls.Dialog = function()
 		Fit.Dom.Remove(dialog);
 
 		if (layer !== null)
-		{
 			Fit.Dom.Remove(layer);
-			layer = null;
-		}
 	}
 
 	this.GetDomElement = function()
@@ -5831,6 +6394,70 @@ Fit.Controls.Dialog = function()
 	}
 
 	init();
+}
+
+Fit.Controls.Dialog._internal = {};
+
+Fit.Controls.Dialog._internal.BaseDialog = function(content, showCancel, cb)
+{
+	Fit.Validation.ExpectString(content);
+	Fit.Validation.ExpectBoolean(showCancel);
+	Fit.Validation.ExpectFunction(cb, true);
+
+	var d = new Fit.Controls.Dialog();
+	d.Content(content);
+	d.Modal(true);
+	Fit.Dom.AddClass(d.GetDomElement(), "FitUiControlDialogBase");
+
+	var cmdOk = new Fit.Controls.Button(Fit.Data.CreateGuid());
+	cmdOk.Title(Fit.Language.Translations.Ok);
+	cmdOk.Icon("check");
+	cmdOk.Type(Fit.Controls.Button.Type.Success);
+	cmdOk.OnClick(function(sender)
+	{
+		d.Close();
+
+		if (Fit.Validation.IsSet(cb) === true)
+			cb(true);
+	});
+	d.AddButton(cmdOk);
+
+	if (showCancel === true)
+	{
+		var cmdCancel = new Fit.Controls.Button(Fit.Data.CreateGuid());
+		cmdCancel.Title(Fit.Language.Translations.Cancel);
+		cmdCancel.Icon("ban");
+		cmdCancel.Type(Fit.Controls.Button.Type.Danger);
+		cmdCancel.OnClick(function(sender)
+		{
+			d.Close();
+
+			if (Fit.Validation.IsSet(cb) === true)
+				cb(false);
+		});
+		d.AddButton(cmdCancel);
+	}
+
+	d.Open();
+	cmdOk.Focused(true);
+}
+
+Fit.Controls.Dialog.Alert = function(content, cb)
+{
+	Fit.Validation.ExpectString(content);
+	Fit.Validation.ExpectFunction(cb, true);
+
+	content = content.toString();
+	Fit.Controls.Dialog._internal.BaseDialog(content, false, cb);
+}
+
+Fit.Controls.Dialog.Confirm = function(content, cb)
+{
+	Fit.Validation.ExpectString(content);
+	Fit.Validation.ExpectFunction(cb);
+
+	content = content.toString();
+	Fit.Controls.Dialog._internal.BaseDialog(content, true, cb);
 }
 // TODO - potentiale and fairly easy improvements:
 //  - Indexed collection of selected nodes for quick retrivale and lookup
@@ -6543,9 +7170,7 @@ Fit.Controls.DropDown = function(ctlId)
 
 		// Optimize tab order
 
-		var concealer = Fit.Dom.GetConcealer(me.GetDomElement());
-
-		if (concealer === null)
+		if (Fit.Dom.IsVisible(me.GetDomElement()) === true)
 		{
 			// Controls is visible - immediately optimize tab order
 
@@ -6556,21 +7181,14 @@ Fit.Controls.DropDown = function(ctlId)
 		}
 		else
 		{
-			// Control is hidden - optimize tab order once it becomes visible again
-
-			// Remove existing mutation observer - Selection Mode (multi/single) may have changed
-			/*if (tabOrderObserverId !== -1)
-			{
-				Fit.Events.RemoveMutationObserver(tabOrderObserverId);
-				tabOrderObserverId = -1;
-			}*/
+			// Control is hidden or not rooted - optimize tab order once it becomes visible
 
 			// Register mutation observer if not already registered
 			if (tabOrderObserverId === -1)
 			{
-				tabOrderObserverId = Fit.Events.AddMutationObserver(concealer, function(elm)
+				tabOrderObserverId = Fit.Events.AddMutationObserver(me.GetDomElement(), function(elm)
 				{
-					if (Fit.Dom.IsVisible(concealer) === true)
+					if (Fit.Dom.IsVisible(me.GetDomElement()) === true)
 					{
 						optimizeTabOrder();
 						disconnect(); // Observers are expensive - remove when no longer needed
@@ -9485,7 +10103,7 @@ Fit.Controls.Input = function(ctlId)
 		// elsewhere when instanceCreated is fired, and only remove it from the DOM if this is not the case.
 		// This problem needs to be solved some other time as it may spawn other problems, such as determining
 		// the size of objects while being invisible. The CKEditor team may also solve the bug in an update.
-		if (me.GetDomElement().parentElement === null)
+		if (Fit.Dom.IsRooted(me.GetDomElement()) === false) //if (me.GetDomElement().parentElement === null)
 		{
 			CKEDITOR._loading = false;
 			Fit.Validation.ThrowError("Control must be appended/rendered to DOM before DesignMode can be initialized");
@@ -10365,6 +10983,8 @@ Fit.Controls.TreeView = function(ctlId)
 	var rootContainer = null;		// UL element
 	var rootNode = null;			// Fit.Controls.TreeView.Node instance
 
+	var keyNavigationEnabled = true;
+
 	var selectable = false;
 	var multiSelect = false;
 	var showSelectAll = false;
@@ -10509,6 +11129,9 @@ Fit.Controls.TreeView = function(ctlId)
 			var ev = Fit.Events.GetEvent(e);
 			var elm = Fit.Events.GetTarget(e);
 
+			if (keyNavigationEnabled === false)
+				return;
+
 			//{ PickerControl support - START
 
 			// If used as picker control, make sure first node is selected on initial key press
@@ -10569,7 +11192,7 @@ Fit.Controls.TreeView = function(ctlId)
 
 			if (ev.keyCode === 13) // Enter
 			{
-				if (node.Selectable() === true && me.AutoPostBack() === true && document.forms.length > 0)
+				if (node.Selectable() === true)
 				{
 					node.Selected(true);
 				}
@@ -10608,8 +11231,7 @@ Fit.Controls.TreeView = function(ctlId)
 
 				if (node.Expanded() === true)
 				{
-					if (node.Expanded() === true)
-						node.Expanded(false);
+					node.Expanded(false);
 				}
 				else
 				{
@@ -10684,12 +11306,37 @@ Fit.Controls.TreeView = function(ctlId)
 				if (target !== me.GetDomElement()) // Skip if right clicking TreeView container (possible if padding is applied)
 				{
 					var node = ((target.tagName === "LI") ? target._internal.Node : Fit.Dom.GetParentOfType(target, "li")._internal.Node);
-					var pos = Fit.Events.GetPointerState().Coordinates.Document;
-
-					openContextMenu(node, pos);
+					openContextMenu(node);
 				}
 
 				return Fit.Events.PreventDefault(e);
+			}
+		});
+
+		var touchTimeout = null;
+		Fit.Events.AddHandler(me.GetDomElement(), "touchstart", function(e)
+		{
+			var target = Fit.Events.GetTarget(e);
+
+			if (target !== me.GetDomElement()) // Skip if touching TreeView container (possible if padding is applied)
+			{
+				touchTimeout = setTimeout(function()
+				{
+					var node = ((target.tagName === "LI") ? target._internal.Node : Fit.Dom.GetParentOfType(target, "li")._internal.Node);
+					openContextMenu(node);
+
+					touchTimeout = null;
+				}, 500);
+			}
+		});
+		Fit.Events.AddHandler(me.GetDomElement(), "touchend", function(e)
+		{
+			var elm = Fit.Events.GetTarget(e);
+
+			if (touchTimeout !== null)
+			{
+				clearTimeout(touchTimeout);
+				touchTimeout = null;
 			}
 		});
 	}
@@ -11111,7 +11758,7 @@ Fit.Controls.TreeView = function(ctlId)
 	}
 
 	/// <function container="Fit.Controls.TreeView" name="GetAllNodes" access="public" returns="Fit.Controls.TreeView.Node[]">
-	/// 	<description> Return all nodes across all children and their children, in a flat structure </description>
+	/// 	<description> Get all nodes across all children and their children, in a flat structure </description>
 	/// </function>
 	this.GetAllNodes = function()
 	{
@@ -11124,6 +11771,48 @@ Fit.Controls.TreeView = function(ctlId)
 			Fit.Array.Add(nodes, n);
 		});
 		return nodes;
+	}
+
+	/// <function container="Fit.Controls.TreeView" name="GetNodeFocused" access="public" returns="Fit.Controls.TreeView.Node">
+	/// 	<description> Get node currently having focus - returns Null if no node has focus </description>
+	/// </function>
+	this.GetNodeFocused = function()
+	{
+		return getNodeFocused();
+	}
+
+	/// <function container="Fit.Controls.TreeView" name="GetNodeAbove" access="public" returns="Fit.Controls.TreeView.Node">
+	/// 	<description> Get node above specified node - returns Null if no node is above the specified one </description>
+	/// 	<param name="node" type="Fit.Controls.TreeView.Node"> Node to get node above </param>
+	/// </function>
+	this.GetNodeAbove = function(node)
+	{
+		return getNodeAbove(node, true);
+	}
+
+	/// <function container="Fit.Controls.TreeView" name="GetNodeBelow" access="public" returns="Fit.Controls.TreeView.Node">
+	/// 	<description> Get node below specified node - returns Null if no node is below the specified one </description>
+	/// 	<param name="node" type="Fit.Controls.TreeView.Node"> Node to get node below </param>
+	/// </function>
+	this.GetNodeBelow = function(node)
+	{
+		return getNodeBelow(node, true, true);
+	}
+
+	/// <function container="Fit.Controls.TreeView" name="KeyboardNavigation" access="public" returns="boolean">
+	/// 	<description> Get/set value indicating whether keyboard navigation is enabled </description>
+	/// 	<param name="val" type="boolean" default="undefined"> If defined, True enables keyboard navigation, False disables it </param>
+	/// </function>
+	this.KeyboardNavigation = function(val)
+	{
+		Fit.Validation.ExpectBoolean(val, true);
+
+		if (Fit.Validation.IsSet(val) === true)
+		{
+			keyNavigationEnabled = val;
+		}
+
+		return keyNavigationEnabled;
 	}
 
 	// See documentation on ControlBase
@@ -11530,9 +12219,10 @@ Fit.Controls.TreeView = function(ctlId)
 		return ((document.activeElement && document.activeElement.tagName === "LI" && document.activeElement._internal && Fit.Dom.Contained(rootContainer, document.activeElement) === true) ? document.activeElement._internal.Node : null);
 	}
 
-	function getNodeAbove(node)
+	function getNodeAbove(node, noLastOnExpand)
 	{
 		Fit.Validation.ExpectInstance(node, Fit.Controls.TreeView.Node);
+		Fit.Validation.ExpectBoolean(noLastOnExpand, true);
 
 		// Get parent node
 		var parent = node.GetParent();
@@ -11545,10 +12235,14 @@ Fit.Controls.TreeView = function(ctlId)
 		// Select node above current node, within same parent
 		var next = ((idx > 0) ? children[idx-1] : null);
 
+		if (noLastOnExpand === true)
+			return next;
+
+		// Now make sure the last node in a hierarchy
+		// of expanded nodes gets selected.
+
 		if (next !== null)
 		{
-			// Now make sure the last node in a hierarchy
-			// of expanded nodes gets selected.
 			while (next.Expanded() === true)
 			{
 				children = next.GetChildren();
@@ -11564,10 +12258,11 @@ Fit.Controls.TreeView = function(ctlId)
 		return next;
 	}
 
-	function getNodeBelow(node, noFirstOnExpand)
+	function getNodeBelow(node, noFirstOnExpand, noSkipToParent)
 	{
 		Fit.Validation.ExpectInstance(node, Fit.Controls.TreeView.Node);
 		Fit.Validation.ExpectBoolean(noFirstOnExpand, true);
+		Fit.Validation.ExpectBoolean(noSkipToParent, true);
 
 		if (node.Expanded() === true && noFirstOnExpand !== true) // Select first child if current node is expanded
 		{
@@ -11588,7 +12283,7 @@ Fit.Controls.TreeView = function(ctlId)
 			// Select node below current node, within same parent
 			var next = ((children.length - 1 >= idx + 1) ? children[idx+1] : null);
 
-			if (next !== null || node.GetParent() === null) // Found, or last element within root node (in which case next variable is Null)
+			if (noSkipToParent === true || next !== null || node.GetParent() === null) // Found, or last element within root node (in which case next variable is Null)
 				return next;
 
 			// No more nodes within parent - select node below parent
@@ -11597,10 +12292,9 @@ Fit.Controls.TreeView = function(ctlId)
 		}
 	}
 
-	function openContextMenu(node, pos)
+	function openContextMenu(node, pos) // pos is optional
 	{
 		Fit.Validation.ExpectInstance(node, Fit.Controls.TreeView.Node);
-		Fit.Validation.ExpectIsSet(pos); // Anonymous JSON object
 
 		if (ctx === null)
 			return;
@@ -11608,7 +12302,10 @@ Fit.Controls.TreeView = function(ctlId)
 		if (fireEventHandlers(onContextMenuHandlers, node) === false)
 			return;
 
-		ctx.Show(pos.X, pos.Y);
+		if (Fit.Validation.IsSet(pos) === true)
+			ctx.Show(pos.X, pos.Y);
+		else
+			ctx.Show();
 	}
 
 	function fireEventHandlers(handlers, evObj)

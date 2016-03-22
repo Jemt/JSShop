@@ -8,6 +8,14 @@ if (!window.Fit)
 JSShop = {};
 JSShop._internal = {};
 
+// Settings
+
+JSShop.Settings = {};
+JSShop.Settings.ShippingExpenseExpression = null;
+JSShop.Settings.ShippingExpenseVat = 0;
+JSShop.Settings.ShippingExpenseMessage = null;
+JSShop.Settings.BasketUrl = null;
+
 // Language
 
 JSShop.Language = {};
@@ -102,7 +110,8 @@ JSShop.Initialize = function(cb)
 
 		// Load presenters
 		{ source: JSShop.GetPath() + "/Presenters/ProductForm.js" },
-		{ source: JSShop.GetPath() + "/Presenters/ProductList.js" }
+		{ source: JSShop.GetPath() + "/Presenters/ProductList.js" },
+		{ source: JSShop.GetPath() + "/Presenters/Basket.js" }
 	],
 	function(cfgs)
 	{

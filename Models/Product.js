@@ -100,7 +100,7 @@ JSShop.Models.Product = function(itemId)
 		var isNumber = /^\-?([0-9]+(\.[0-9]+)?)$/.test(discount.toString()); // Both positive and negative values are allowed
 
 		if (isNumber === false || typeof(discount) !== "number")
-			throw "NotNumber: Discount expression did not produce a valid value (number)";
+			throw "NotNumber: Discount Expression did not produce a valid value (number)";
 
 		return discount;
 	}

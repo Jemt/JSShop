@@ -109,9 +109,10 @@ JSShop.Models.Basket.CreateOrder = function(cbSuccess)
 {
 	Fit.Validation.ExpectFunction(cbSuccess);
 
-	// WARNING:
-	// Data should be validated server side before checkout to
-	// prevent malicious users from tampering with prices or discounts !
+	// NOTICE:
+	// Backend is responsible for calculating discounts,
+	// shipping expence, VAT, totals, etc., to prevent
+	// malicious users from tampering with data.
 
 	var basketData = Fit.Cookies.Get("JSShopBasket");
 	var basket = ((basketData !== null) ? JSON.parse(basketData) : { Items: [] });

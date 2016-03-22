@@ -6,7 +6,7 @@ JSShop.Presenters.ProductList.Initialize = function(productList)
 
 	// Load CSS
 
-	if (document.querySelectorAll("link[href*='/Views/ProductList.css']") === null) // Might have been loaded by CMS to prevent flickering (FOUC - flash of unstyled content)
+	if (document.querySelector("link[href*='/Views/ProductList.css']") === null) // Might have been loaded by CMS to prevent flickering (FOUC - flash of unstyled content)
 		Fit.Loader.LoadStyleSheet(JSShop.GetPath() + "/Views/ProductList.css");
 
 	// Create Buy buttons
@@ -65,17 +65,20 @@ JSShop.Presenters.ProductList.Initialize = function(productList)
 				dialog.Modal(true);
 				dialog.Content("<b>" + JSShop.Language.Translations.ProductList.ProductAdded + "</b><br><br>" + i.Value() + " x " + p.Title());
 
-				var cmdCheckout = new Fit.Controls.Button("JSShopBasketButton" + Fit.Data.CreateGuid());
-				cmdCheckout.Type(Fit.Controls.Button.Type.Info);
-				cmdCheckout.Icon("credit-card-alt");
-				cmdCheckout.Title(JSShop.Language.Translations.ProductList.Checkout);
-				cmdCheckout.OnClick(function(sender)
+				if (JSShop.Settings.BasketUrl !== null)
 				{
-					dialog.Close();
-					b.Enabled(true);
-					setTimeout(function() { alert("Navigating to basket.."); }, 1000);
-				});
-				dialog.AddButton(cmdCheckout);
+					var cmdOpenBasket = new Fit.Controls.Button("JSShopBasketButton" + Fit.Data.CreateGuid());
+					cmdOpenBasket.Type(Fit.Controls.Button.Type.Info);
+					cmdOpenBasket.Icon("shopping-basket"); // credit-card-alt
+					cmdOpenBasket.Title(JSShop.Language.Translations.ProductList.OpenBasket);
+					cmdOpenBasket.OnClick(function(sender)
+					{
+						dialog.Close();
+						b.Enabled(true);
+						location.href = JSShop.Settings.BasketUrl;
+					});
+					dialog.AddButton(cmdOpenBasket);
+				}
 
 				var cmdContinue = new Fit.Controls.Button("JSShopContinueButton" + Fit.Data.CreateGuid());
 				cmdContinue.Type(Fit.Controls.Button.Type.Primary);
@@ -121,5 +124,19 @@ JSShop.Presenters.ProductList.Initialize = function(productList)
 
 		btn.innerHTML = "";
 		Fit.Dom.Add(btn, b.GetDomElement());
+	});
+
+	// Localize numbers
+
+	var elements = document.querySelectorAll(".JSShopLocalizedNumber");
+	Fit.Array.ForEach(elements, function(elm)
+	{
+		var val = elm.innerHTML;
+		var isNumber = /^\-?([0-9]+(\.[0-9]+)?)$/.test(val); // Both positive and negative values are allowed
+
+		if (isNumber === false)
+			return; // Skip
+
+		elm.innerHTML = val.replace(".", JSShop.Language.Translations.Locale.DecimalSeparator);
 	});
 }

@@ -41,8 +41,22 @@
 		ProductList:
 		{
 			ProductAdded:		"Product added to basket",
-			Checkout:			"Checkout",
+			OpenBasket:			"Go to basket",
 			ContinueShopping:	"Continue shopping"
+		},
+
+		Basket:
+		{
+			BasketEmpty:		"Shopping basket is empty",
+			Product:			"Product",
+			UnitPrice:			"Unit price",
+			Units:				"Units",
+			Discount:			"Discount",
+			Price:				"Price",
+			TotalVat:			"VAT",
+			TotalPrice:			"Price incl. VAT",
+			ShippingExpense:	"Shipping expense",
+			NumberOfUnits:		"Number of units"
 		}
 	};
 })();

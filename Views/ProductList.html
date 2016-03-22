@@ -1,6 +1,6 @@
 <div id="JSShopProductList" class="JSShopProductList">
 	<!-- REPEAT Products -->
-	<div class="JSShopProduct">
+	<div class="JSShopProduct" id="JSShopProduct{[Id]}">
 		<div class="JSShopProductHeader">
 			<i class="JSShopCloseDialogButton fa fa-times-circle" onclick="JSShopCloseProductDialog();"></i>
 			<span class="JSShopProductTitle">{[Title]}</span>
@@ -20,10 +20,10 @@
 			<span class="JSShopProductDescription">{[Description]}</span>
 		</div>
 		<div class="JSShopProductFooter">
-			<span class="JSShopProductWeight" data-weight="{[Weight]}" data-unit="{[WeightUnit]}">{[Weight]} {[WeightUnit]}.</span>
+			<span class="JSShopProductWeight" data-weight="{[Weight]}" data-unit="{[WeightUnit]}"><span class="JSShopLocalizedNumber">{[Weight]}</span> {[WeightUnit]}.</span>
 			<span class="JSShopProductDeliveryTime" data-delivery="{[DeliveryTime]}">{[DeliveryTime]}</span>
-			<span class="JSShopProductFullPrice" data-currency="{[Currency]}" data-fullprice="{[FullPrice]}">{[Currency]} {[FullPrice]}</span>
-			<span class="JSShopProductPriceInfo" data-price="{[Price]}" data-vat="{[Vat]}">({[Currency]} {[Price]} + {[Vat]}%)</span>
+			<span class="JSShopProductFullPrice" data-currency="{[Currency]}" data-fullprice="{[FullPrice]}">{[Currency]} <span class="JSShopLocalizedNumber">{[FullPrice]}</span></span>
+			<span class="JSShopProductPriceInfo" data-price="{[Price]}" data-vat="{[Vat]}">({[Currency]} <span class="JSShopLocalizedNumber">{[Price]}</span> + <span class="JSShopLocalizedNumber">{[Vat]}</span>%)</span>
 			<div class="JSShopProductButtons">
 				<span class="JSShopButton JSShopInfoButton" onclick="JSShopOpenProductDialog(this.parentElement.parentElement.parentElement);">{[ReadMore]}</span>
 				<span class="JSShopBuyButton JSShopBuyButton" data-ProductId="{[Id]}">{[Buy]}</span>
@@ -73,6 +73,14 @@ function JSShopOpenProductDialog(prod)
 		prod.style.cssText = "";
 	});
 	Fit.Dom.Add(document.body, layer);
+
+	// Add Product ID to URL
+
+	var qs = Fit.Browser.GetQueryString();
+	var url = ((qs.Anchor !== null) ? qs.Url.replace("#" + qs.Anchor, "") : qs.Url);
+	url += "#" + prod.id.replace("JSShopProduct", "");
+	
+	location.href = url;
 }
 
 function JSShopCloseProductDialog()
@@ -107,4 +115,17 @@ function JSShopSwitchImage(imageContainer, direction)
 	visible.style.display = "none";
 	nextImage.style.display = "block";
 }
+
+(function()
+{
+	var qs = Fit.Browser.GetQueryString();
+
+	if (qs.Anchor !== null)
+	{
+		var prod = document.getElementById("JSShopProduct" + qs.Anchor);
+
+		if (prod !== null)
+			JSShopOpenProductDialog(prod);
+	}
+})();
 </script>

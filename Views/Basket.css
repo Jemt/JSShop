@@ -1,0 +1,146 @@
+table.JSShopBasket
+{
+	width: 100%;
+	border-spacing: 0px;
+}
+
+table.JSShopBasket td
+{
+	padding: 0.3em 0.5em 0.3em 0.5em;
+	vertical-align: top;
+}
+
+tr.JSShopBasketHeader td
+{
+	font-weight: bold;
+	border-bottom: 1px solid #8A8A8A;
+	border-bottom: 1px solid rgba(0, 0, 0, 0.3);
+	white-space: nowrap;
+}
+
+span.JSShopDiscount,
+span.JSShopDiscountMessage
+{
+	display: block; /* As block element to wrap to new line */
+	font-size: 0.9em;
+}
+span.JSShopDiscount[data-discount="0.00"],
+span.JSShopDiscount[data-discount="0,00"],
+span.JSShopDiscountMessage[data-discount="0.00"],
+span.JSShopDiscountMessage[data-discount="0,00"]
+{
+	display: none;
+}
+
+tr.JSShopBasketTotalVat td
+{
+	padding-top: 0.75em;
+	border-top: 1px solid #8A8A8A;
+	border-top: 1px solid rgba(0, 0, 0, 0.3);
+}
+
+span.GrandTotal
+{
+	border-bottom: 4px double #8A8A8A;
+	border-bottom: 4px double rgba(0, 0, 0, 0.3);
+}
+
+/* Mobile view */
+
+@media (max-width: 500px)
+{
+	/* Turn table elements into block elements */
+	table, thead, tbody, th, tr, td
+	{
+		display: block;
+	}
+
+	/* Hide table header (avoiding display:none for accessibility) */
+	tr.JSShopBasketHeader
+	{
+		position: absolute;
+		top: -9999px;
+		left: -9999px;
+	}
+
+	table.JSShopBasket td
+	{
+		padding: 0.3em 0em 0.3em 0em;
+	}
+
+	/* Item labels */
+	tr.JSShopBasketItem td
+	{
+		position: relative;
+	}
+	tr.JSShopBasketItem td:before
+	{
+		position: absolute;
+		left: 0px;
+		top: 0px;
+		width: 60%;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		padding-top: 0.3em;
+	}
+
+	/* Label values */
+	tr.JSShopBasketItem td:nth-of-type(1) /* Product title */
+	{
+		font-weight: bold;
+	}
+	tr.JSShopBasketItem td:nth-of-type(2):before, /* Unit price */
+	tr.JSShopBasketItem td:nth-of-type(3):before, /* Units */
+	tr.JSShopBasketItem td:nth-of-type(4):before  /* Price */
+	{
+		text-align: left;
+		content: attr(data-title);
+	}
+
+	/* Spacing between items */
+	tr.JSShopBasketItem
+	{
+		padding: 0.5em 0em 0.5em 0em;
+		border-bottom: 1px solid rgba(0, 0, 0, 0.3);
+	}
+
+	/* Totals */
+	tr.JSShopBasketTotal
+	{
+		display: table-row;
+	}
+	tr.JSShopBasketTotal td
+	{
+		display: table-cell;
+		border-top: none;
+		text-align: left !important;
+		width: 100%;
+	}
+	tr.JSShopBasketTotal td:nth-of-type(1)
+	{
+		padding-right: 1em;
+	}
+	tr.JSShopBasketTotal td:nth-of-type(3)
+	{
+		text-align: right !important;
+		padding-left: 1em;
+	}
+
+	/* Discount */
+	span.JSShopDiscount:before
+	{
+		content: attr(data-message);
+		position: absolute;
+		left: 0px;
+		width: 60%;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		text-align: left;
+	}
+	span.JSShopDiscountMessage
+	{
+		display: none;
+	}
+}
