@@ -57,6 +57,12 @@
 			TotalPrice:			"Price incl. VAT",
 			ShippingExpense:	"Shipping expense",
 			NumberOfUnits:		"Number of units"
+		},
+
+		Common:
+		{
+			Ok:					"OK",
+			Cancel:				"Cancel"
 		}
 	};
 })();

@@ -79,7 +79,7 @@ function JSShopOpenProductDialog(prod)
 	var qs = Fit.Browser.GetQueryString();
 	var url = ((qs.Anchor !== null) ? qs.Url.replace("#" + qs.Anchor, "") : qs.Url);
 	url += "#" + prod.id.replace("JSShopProduct", "");
-	
+
 	location.href = url;
 }
 

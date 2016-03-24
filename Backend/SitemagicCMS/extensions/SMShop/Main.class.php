@@ -34,6 +34,9 @@ class SMShop extends SMExtension
 		$langCode = SMLanguageHandler::GetSystemLanguage();
 		$shopLang = ((SMFileSystem::FileExists(dirname(__FILE__) . "/JSShop/Languages/" . $langCode . ".js") === true) ? $langCode : "en");
 
+		$cookiePrefix = ((SMEnvironment::IsSubSite() === false) ? "SMRoot" : "") . "JSShop"; // Prevent cookies on root site from causing naming conflicts with cookies on subsites
+		$cookiePath = SMEnvironment::GetInstallationPath(); // Prevent /shop virtual directory from being used as cookie path when adding products to basket
+
 		$jsInit = "
 		<script type=\"text/javascript\">
 		JSShop.Settings.ShippingExpenseExpression = \"" . ((SMAttributes::GetAttribute("SMShopShippingExpenseExpression") !== null) ? SMAttributes::GetAttribute("SMShopShippingExpenseExpression") : "") . "\";
@@ -42,6 +45,9 @@ class SMShop extends SMExtension
 		JSShop.Settings.BasketUrl = \"" . SMExtensionManager::GetExtensionUrl($this->name) . "&SMShopBasket" . "\";
 
 		JSShop.Language.Name = \"" . $shopLang . "\";
+
+		JSShop.Cookies.Prefix(\"" . $cookiePrefix . "\");
+		JSShop.Cookies.Path(\"" . $cookiePath . "\");
 
 		JSShop.WebService.Products.Create = \"" . $dsCallback . "\";
 		JSShop.WebService.Products.Retrieve = \"" . $dsCallback . "\";

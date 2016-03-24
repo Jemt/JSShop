@@ -225,7 +225,7 @@ JSShop.Presenters.Basket = function()
 									// Create dialog buttons
 
 									var cmdSave = new Fit.Controls.Button(Fit.Data.CreateGuid());
-									cmdSave.Title("OK");
+									cmdSave.Title(JSShop.Language.Translations.Common.Ok);
 									cmdSave.Type(Fit.Controls.Button.Type.Success);
 									cmdSave.OnClick(function(sender)
 									{
@@ -236,7 +236,7 @@ JSShop.Presenters.Basket = function()
 									dialog.AddButton(cmdSave);
 
 									var cmdCancel = new Fit.Controls.Button(Fit.Data.CreateGuid());
-									cmdCancel.Title("Cancel");
+									cmdCancel.Title(JSShop.Language.Translations.Common.Cancel);
 									cmdCancel.Type(Fit.Controls.Button.Type.Danger);
 									cmdCancel.OnClick(function(sender)
 									{

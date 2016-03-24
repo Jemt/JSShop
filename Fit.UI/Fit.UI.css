@@ -2350,8 +2350,7 @@ div.FitUiControlDialog
 
 	position: fixed;
 
-	/* Centering for Legacy browsers.
-	   Unfortunately this does not work with width:auto. */
+	/* Centering for Legacy browsers - unfortunately this does not work with width:auto */
 	width: 40%;
 	top: 2em;
 	left: 0px;
@@ -2368,14 +2367,14 @@ div.FitUiControlDialog:not(#LegacyIE) /* :not() not supported by IE8 and below *
 	/* Centering for modern browsers */
 	width: auto;
 	margin: 0;
-	top: 50%;
+	top: 25%;
 	left: 50%;
-	right: auto; /* Prevent dialog from stretching to the maximum width allowed - respect width:auto (not supported by any version of IE) */
-	-webkit-transform: translate(-50%, -50%);
-	-moz-transform: translate(-50%, -50%);
-	-ms-transform: translate(-50%, -50%);
-	-o-transform: translate(-50%, -50%);
-	transform: translate(-50%, -50%);
+	right: auto; /* Prevent dialog from stretching to the maximum width allowed - respect width:auto */
+	-webkit-transform: translate(-50%, -25%);
+	-moz-transform: translate(-50%, -25%);
+	-ms-transform: translate(-50%, -25%);
+	-o-transform: translate(-50%, -25%);
+	transform: translate(-50%, -25%);
 }
 @media (max-width: 1000px)
 {

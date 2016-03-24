@@ -57,6 +57,12 @@
 			TotalPrice:			"Pris inkl. moms",
 			ShippingExpense:	"Forsendelsesomkostning",
 			NumberOfUnits:		"Antal enheder"
+		},
+
+		Common:
+		{
+			Ok:					"OK",
+			Cancel:				"Annuller"
 		}
 	};
 })();

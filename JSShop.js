@@ -22,10 +22,13 @@ JSShop.Language = {};
 JSShop.Language.Name = "en";
 JSShop.Language.Translations = {};
 
-// Models and presenters
+// Models, Presenters, and Cookies
 
 JSShop.Models = {};
 JSShop.Presenters = {};
+
+JSShop.Cookies = new Fit.Cookies();
+JSShop.Cookies.Prefix("JSShop");
 
 // Communication
 

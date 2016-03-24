@@ -11,7 +11,7 @@ JSShop.Models.Basket.Add = function(productId, units)
 	if (units < 1)
 		return;
 
-	var basketData = Fit.Cookies.Get("JSShopBasket");
+	var basketData = JSShop.Cookies.Get("Basket");
 	var basket = ((basketData !== null) ? JSON.parse(basketData) : { Items: [] });
 
 	var alreadyAdded = false;
@@ -33,7 +33,7 @@ JSShop.Models.Basket.Add = function(productId, units)
 		Fit.Array.Add(basket.Items, item);
 	}
 
-	Fit.Cookies.Set("JSShopBasket", JSON.stringify(basket)); // Session cookie
+	JSShop.Cookies.Set("Basket", JSON.stringify(basket)); // Session cookie
 }
 
 JSShop.Models.Basket.Update = function(productId, units)
@@ -47,7 +47,7 @@ JSShop.Models.Basket.Update = function(productId, units)
 		return;
 	}
 
-	var basketData = Fit.Cookies.Get("JSShopBasket");
+	var basketData = JSShop.Cookies.Get("Basket");
 	var basket = ((basketData !== null) ? JSON.parse(basketData) : { Items: [] });
 
 	var exists = false;
@@ -65,7 +65,7 @@ JSShop.Models.Basket.Update = function(productId, units)
 
 	if (exists === true)
 	{
-		Fit.Cookies.Set("JSShopBasket", JSON.stringify(basket)); // Session cookie
+		JSShop.Cookies.Set("Basket", JSON.stringify(basket)); // Session cookie
 	}
 	else
 	{
@@ -79,7 +79,7 @@ JSShop.Models.Basket.Remove = function(productId)
 {
 	Fit.Validation.ExpectStringValue(productId);
 
-	var basketData = Fit.Cookies.Get("JSShopBasket");
+	var basketData = JSShop.Cookies.Get("Basket");
 	var basket = ((basketData !== null) ? JSON.parse(basketData) : { Items: [] });
 	var newBasket = { Items: [] };
 
@@ -89,12 +89,12 @@ JSShop.Models.Basket.Remove = function(productId)
 			Fit.Array.Add(newBasket.Items, item);
 	});
 
-	Fit.Cookies.Set("JSShopBasket", JSON.stringify(newBasket)); // Session cookie
+	JSShop.Cookies.Set("Basket", JSON.stringify(newBasket)); // Session cookie
 }
 
 JSShop.Models.Basket.GetItems = function()
 {
-	var basketData = Fit.Cookies.Get("JSShopBasket");
+	var basketData = JSShop.Cookies.Get("Basket");
 	var basket = ((basketData !== null) ? JSON.parse(basketData) : { Items: [] });
 
 	return basket.Items;
@@ -102,7 +102,7 @@ JSShop.Models.Basket.GetItems = function()
 
 JSShop.Models.Basket.Clear = function()
 {
-	Fit.Cookies.Remove("JSShopBasket");
+	JSShop.Cookies.Remove("Basket");
 }
 
 JSShop.Models.Basket.CreateOrder = function(cbSuccess)
@@ -114,7 +114,7 @@ JSShop.Models.Basket.CreateOrder = function(cbSuccess)
 	// shipping expence, VAT, totals, etc., to prevent
 	// malicious users from tampering with data.
 
-	var basketData = Fit.Cookies.Get("JSShopBasket");
+	var basketData = JSShop.Cookies.Get("Basket");
 	var basket = ((basketData !== null) ? JSON.parse(basketData) : { Items: [] });
 
 	var order = new JSShop.Models.Order(Fit.Data.CreateGuid());

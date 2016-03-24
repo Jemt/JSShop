@@ -262,13 +262,13 @@ JSShop.Presenters.ProductForm = function()
 		txtPrice.SetValidationExpression(new RegExp("^([0-9]+(\\" + JSShop.Language.Translations.Locale.DecimalSeparator + "[0-9]+)?)?$"), lang.InvalidValue); // /^([0-9]+(\.[0-9]+)?)?$/
 		txtPrice.Scope("JSShopProductForm");
 
-		if (Fit.Cookies.Get("JSShopPreviousCurrency") === null)
+		if (JSShop.Cookies.Get("PreviousCurrency") === null)
 		{
-			Fit.Cookies.Set("JSShopPreviousCurrency", JSShop.Language.Translations.Locale.Currency, 365 * 24 * 60 * 60); // Expires in 1 year
+			JSShop.Cookies.Set("PreviousCurrency", JSShop.Language.Translations.Locale.Currency, 365 * 24 * 60 * 60); // Expires in 1 year
 		}
 
 		var currencies = null; // Data from Currencies.json
-		var prevCur = Fit.Cookies.Get("JSShopPreviousCurrency");
+		var prevCur = JSShop.Cookies.Get("PreviousCurrency");
 
 		lstCurrencies = new Fit.Controls.DropDown("JSShopProductCurrency");
 		lstCurrencies.Width(125, "px");
@@ -325,7 +325,7 @@ JSShop.Presenters.ProductForm = function()
 		});
 		lstCurrencies.OnChange(function(sender)
 		{
-			Fit.Cookies.Set("JSShopPreviousCurrency", lstCurrencies.Value(), 365 * 24 * 60 * 60); // Expires in 1 year
+			JSShop.Cookies.Set("PreviousCurrency", lstCurrencies.Value(), 365 * 24 * 60 * 60); // Expires in 1 year
 		});
 
 		txtVat = new Fit.Controls.Input("JSShopProductVat");
@@ -333,10 +333,10 @@ JSShop.Presenters.ProductForm = function()
 		txtVat.SetValidationCallback(function(val) { return (val.length <= 10); }, lang.MaxLengthExceeded);
 		txtVat.SetValidationExpression(new RegExp("^([0-9]+(\\" + JSShop.Language.Translations.Locale.DecimalSeparator + "[0-9]+)?)?$"), lang.InvalidValue); // /^([0-9]+(\.[0-9]+)?)?$/
 		txtVat.Scope("JSShopProductForm");
-		txtVat.Value(((Fit.Cookies.Get("JSShopPreviousVat") !== null) ? Fit.Cookies.Get("JSShopPreviousVat") : ""));
+		txtVat.Value(((JSShop.Cookies.Get("PreviousVat") !== null) ? JSShop.Cookies.Get("PreviousVat") : ""));
 		txtVat.OnChange(function(sender)
 		{
-			Fit.Cookies.Set("JSShopPreviousVat", txtVat.Value(), 365 * 24 * 60 * 60); // Expires in 1 year
+			JSShop.Cookies.Set("PreviousVat", txtVat.Value(), 365 * 24 * 60 * 60); // Expires in 1 year
 		});
 
 		txtWeight = new Fit.Controls.Input("JSShopProductWeight");
@@ -345,33 +345,33 @@ JSShop.Presenters.ProductForm = function()
 		txtWeight.SetValidationExpression(new RegExp("^([0-9]+(\\" + JSShop.Language.Translations.Locale.DecimalSeparator + "[0-9]+)?)?$"), lang.InvalidValue); // /^([0-9]+(\.[0-9]+)?)?$/
 		txtWeight.Scope("JSShopProductForm");
 
-		if (Fit.Cookies.Get("JSShopPreviousWeightUnit") === null)
+		if (JSShop.Cookies.Get("PreviousWeightUnit") === null)
 		{
-			Fit.Cookies.Set("JSShopPreviousWeightUnit", getWeightUnitControlValue(JSShop.Language.Translations.Locale.WeightUnit), 365 * 24 * 60 * 60); // Expires in 1 year
+			JSShop.Cookies.Set("PreviousWeightUnit", getWeightUnitControlValue(JSShop.Language.Translations.Locale.WeightUnit), 365 * 24 * 60 * 60); // Expires in 1 year
 		}
 
-		Fit.Cookies.Get("JSShopPreviousWeightUnit")
+		JSShop.Cookies.Get("PreviousWeightUnit")
 
 		lstWeightUnits = new Fit.Controls.DropDown("JSShopProductWeightUnit");
 		lstWeightUnits.Width(125, "px");
 		lstWeightUnits.SetPicker(new Fit.Controls.ListView());
 		lstWeightUnits.GetPicker().AddItem(lang.Kilos, "kg");
 		lstWeightUnits.GetPicker().AddItem(lang.Pounds, "lbs");
-		lstWeightUnits.Value(Fit.Cookies.Get("JSShopPreviousWeightUnit"));
+		lstWeightUnits.Value(JSShop.Cookies.Get("PreviousWeightUnit"));
 		lstWeightUnits.Required(true);
 		lstWeightUnits.OnChange(function(sender)
 		{
-			Fit.Cookies.Set("JSShopPreviousWeightUnit", lstWeightUnits.Value(), 365 * 24 * 60 * 60); // Expires in 1 year
+			JSShop.Cookies.Set("PreviousWeightUnit", lstWeightUnits.Value(), 365 * 24 * 60 * 60); // Expires in 1 year
 		});
 
 		txtDeliveryTime = new Fit.Controls.Input("JSShopProductDeliveryTime");
 		txtDeliveryTime.Width(350, "px");
-		txtDeliveryTime.Value(((Fit.Cookies.Get("JSShopPreviousDeliveryTime") !== null) ? Fit.Cookies.Get("JSShopPreviousDeliveryTime") : ""));
+		txtDeliveryTime.Value(((JSShop.Cookies.Get("PreviousDeliveryTime") !== null) ? JSShop.Cookies.Get("PreviousDeliveryTime") : ""));
 		txtDeliveryTime.SetValidationCallback(function(val) { return (val.length <= 50); }, lang.MaxLengthExceeded);
 		txtDeliveryTime.Scope("JSShopProductForm");
 		txtDeliveryTime.OnChange(function(sender)
 		{
-			Fit.Cookies.Set("JSShopPreviousDeliveryTime", txtDeliveryTime.Value(), 365 * 24 * 60 * 60); // Expires in 1 year
+			JSShop.Cookies.Set("PreviousDeliveryTime", txtDeliveryTime.Value(), 365 * 24 * 60 * 60); // Expires in 1 year
 		});
 
 		// Test:  (items >= 10 ? items*price*0.20 : (items >= 3 ? price : 0))
@@ -615,11 +615,11 @@ JSShop.Presenters.ProductForm = function()
 			txtDescription.Value("");
 			picImages.Clear(); // Clear file picker
 			txtPrice.Value("");
-			lstCurrencies.Value(((Fit.Cookies.Get("JSShopPreviousCurrency") !== null) ? Fit.Cookies.Get("JSShopPreviousCurrency") : ""));
-			txtVat.Value(((Fit.Cookies.Get("JSShopPreviousVat") !== null) ? Fit.Cookies.Get("JSShopPreviousVat") : ""));
+			lstCurrencies.Value(((JSShop.Cookies.Get("PreviousCurrency") !== null) ? JSShop.Cookies.Get("PreviousCurrency") : ""));
+			txtVat.Value(((JSShop.Cookies.Get("PreviousVat") !== null) ? JSShop.Cookies.Get("PreviousVat") : ""));
 			txtWeight.Value("");
-			lstWeightUnits.Value(((Fit.Cookies.Get("JSShopPreviousWeightUnit") !== null) ? Fit.Cookies.Get("JSShopPreviousWeightUnit") : ""));
-			txtDeliveryTime.Value(((Fit.Cookies.Get("JSShopPreviousDeliveryTime") !== null) ? Fit.Cookies.Get("JSShopPreviousDeliveryTime") : ""));
+			lstWeightUnits.Value(((JSShop.Cookies.Get("PreviousWeightUnit") !== null) ? JSShop.Cookies.Get("PreviousWeightUnit") : ""));
+			txtDeliveryTime.Value(((JSShop.Cookies.Get("PreviousDeliveryTime") !== null) ? JSShop.Cookies.Get("PreviousDeliveryTime") : ""));
 			txtDiscountExpr.Value("");
 			txtDiscountMsg.Value("");
 
