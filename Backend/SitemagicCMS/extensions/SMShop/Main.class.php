@@ -21,21 +21,66 @@ class SMShop extends SMExtension
 
 	public function InitComplete()
 	{
+		// Add links to SMMenu and SMPages
+
+		if ($this->smMenuExists === true || $this->smPagesExists === true)
+		{
+			// Add basket and product categories to link pickers
+
+			$ds = new SMDataSource("SMShopProducts");
+			$products = $ds->Select("Category, CategoryId", "", "Category ASC");
+
+			if ($this->smMenuExists === true && SMMenuLinkList::GetInstance()->GetReadyState() === true)
+			{
+				$menuLinkList = SMMenuLinkList::GetInstance();
+				$added = array();
+
+				foreach ($products as $prod)
+				{
+					if (in_array($prod["CategoryId"], $added, true) === true)
+						continue;
+
+					$menuLinkList->AddLink($this->getTranslation("Title"), $prod["Category"], "shop/" . $prod["CategoryId"]);
+					$added[] = $prod["CategoryId"];
+				}
+			}
+
+			if ($this->smPagesExists === true && SMPagesLinkList::GetInstance()->GetReadyState() === true)
+			{
+				$pagesLinkList = SMPagesLinkList::GetInstance();
+				$added = array();
+
+				foreach ($products as $prod)
+				{
+					if (in_array($prod["CategoryId"], $added, true) === true)
+						continue;
+
+					$pagesLinkList->AddLink($this->getTranslation("Title"), $prod["Category"], "shop/" . $prod["CategoryId"]);
+					$added[] = $prod["CategoryId"];
+				}
+			}
+		}
+
+		// Load JS and CSS resources
+
 		SMEnvironment::GetMasterTemplate()->RegisterResource(SMTemplateResource::$JavaScript, SMExtensionManager::GetExtensionPath($this->name) . "/JSShop/Fit.UI/Fit.UI.js");
-		SMEnvironment::GetMasterTemplate()->RegisterResource(SMTemplateResource::$StyleSheet, SMExtensionManager::GetExtensionPath($this->name) . "/JSShop/Fit.UI/Fit.UI.css");
+		SMEnvironment::GetMasterTemplate()->RegisterResource(SMTemplateResource::$StyleSheet, SMExtensionManager::GetExtensionPath($this->name) . "/JSShop/Fit.UI/Fit.UI.css", true);
 		SMEnvironment::GetMasterTemplate()->RegisterResource(SMTemplateResource::$JavaScript, SMExtensionManager::GetExtensionPath($this->name) . "/JSShop/JSShop.js");
+
+		// Configure JSShop
 
 		$basePath = SMEnvironment::GetInstallationPath(); // Use full path to prevent problems when calling WebServices under /shop/XYZ which would be redirected to / without preserving POST data (htaccess)
 		$basePath .= (($basePath !== "/") ? "/" : "");
 
 		$dsCallback = $basePath . SMExtensionManager::GetCallbackUrl($this->name, "Callbacks/DataSource");
 		$fsCallback = $basePath . SMExtensionManager::GetCallbackUrl($this->name, "Callbacks/Files");
+		$payCallback = $basePath . SMExtensionManager::GetCallbackUrl($this->name, "Callbacks/Payment");
 
 		$langCode = SMLanguageHandler::GetSystemLanguage();
 		$shopLang = ((SMFileSystem::FileExists(dirname(__FILE__) . "/JSShop/Languages/" . $langCode . ".js") === true) ? $langCode : "en");
 
-		$cookiePrefix = ((SMEnvironment::IsSubSite() === false) ? "SMRoot" : "") . "JSShop"; // Prevent cookies on root site from causing naming conflicts with cookies on subsites
-		$cookiePath = SMEnvironment::GetInstallationPath(); // Prevent /shop virtual directory from being used as cookie path when adding products to basket
+		$cookiePrefix = ((SMEnvironment::IsSubSite() === false) ? "SMRoot" : ""); // Prevent cookies on root site from causing naming conflicts with cookies on subsites
+		$cookiePath = SMEnvironment::GetInstallationPath(); // Prevent /shop virtual directory from being used as cookie path when adding products to basket by forcing cookie path
 
 		$jsInit = "
 		<script type=\"text/javascript\">
@@ -43,10 +88,12 @@ class SMShop extends SMExtension
 		JSShop.Settings.ShippingExpenseVat = " . ((SMAttributes::GetAttribute("SMShopShippingExpenseVat") !== null && SMAttributes::GetAttribute("SMShopShippingExpenseVat") !== "") ? SMAttributes::GetAttribute("SMShopShippingExpenseVat") : "0") . ";
 		JSShop.Settings.ShippingExpenseMessage = \"" . ((SMAttributes::GetAttribute("SMShopShippingExpenseMessage") !== null) ? SMAttributes::GetAttribute("SMShopShippingExpenseMessage") : "") . "\";
 		JSShop.Settings.BasketUrl = \"" . SMExtensionManager::GetExtensionUrl($this->name) . "&SMShopBasket" . "\";
+		JSShop.Settings.TermsUrl = \"" . ((SMAttributes::GetAttribute("SMShopTermsPage") !== null) ? SMAttributes::GetAttribute("SMShopTermsPage") : "") . "\";
+		JSShop.Settings.PaymentUrl = \"" . $payCallback . "\";
 
 		JSShop.Language.Name = \"" . $shopLang . "\";
 
-		JSShop.Cookies.Prefix(\"" . $cookiePrefix . "\");
+		JSShop.Cookies.Prefix(\"" . $cookiePrefix . "\" + JSShop.Cookies.Prefix());
 		JSShop.Cookies.Path(\"" . $cookiePath . "\");
 
 		JSShop.WebService.Products.Create = \"" . $dsCallback . "\";
@@ -91,6 +138,15 @@ class SMShop extends SMExtension
 				var catId = category;
 
 				catId = catId.replace(/ /g, \"_\"); // Replace spaces with underscores
+
+				// Support alternatives to danish characters
+				catId = catId.replace(/Æ/g, \"Ae\");
+				catId = catId.replace(/æ/g, \"ae\");
+				catId = catId.replace(/Ø/g, \"Eo\");
+				catId = catId.replace(/ø/g, \"oe\");
+				catId = catId.replace(/Å/g, \"Aa\");
+				catId = catId.replace(/å/g, \"aa\");
+
 				catId = catId.replace(/[^A-Za-z0-9_-]/g, \"\"); // Remove invalid characters (^ in a range means NOT)
 
 				if (catId !== category)
@@ -130,7 +186,7 @@ class SMShop extends SMExtension
 		};
 		JSShop.Events.OnError = function(request, models, operation)
 		{
-			alert('WebService communication failed (' + operation + '):\\n' + request.GetResponseText());
+			Fit.Controls.Dialog.Alert('WebService communication failed (' + operation + '):<br><br>' + request.GetResponseText().replace(\"<pre>\", \"<pre style='overflow: auto'>\"));
 		};
 		</script>
 		";
@@ -167,7 +223,7 @@ class SMShop extends SMExtension
 			$menuItem = SMMenuManager::GetInstance()->GetChild("SMMenuContent");
 
 			if ($menuItem !== null)
-				$menuItem->AddChild(new SMMenuItem($this->name, $this->getTranslation("Title"), SMExtensionManager::GetExtensionUrl($this->name) . "&SMShopEditProducts"));
+				$menuItem->AddChild(new SMMenuItem($this->name, $this->getTranslation("Products"), SMExtensionManager::GetExtensionUrl($this->name) . "&SMShopEditProducts"));
 		}
 	}
 

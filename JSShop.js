@@ -15,6 +15,8 @@ JSShop.Settings.ShippingExpenseExpression = null;
 JSShop.Settings.ShippingExpenseVat = 0;
 JSShop.Settings.ShippingExpenseMessage = null;
 JSShop.Settings.BasketUrl = null;
+JSShop.Settings.TermsUrl = null;
+JSShop.Settings.PaymentUrl = null;
 
 // Language
 
