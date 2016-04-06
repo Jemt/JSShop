@@ -21,43 +21,41 @@ class SMShop extends SMExtension
 
 	public function InitComplete()
 	{
-		// Add links to SMMenu and SMPages
+		// Add basket and product categories to link pickers
 
-		if ($this->smMenuExists === true || $this->smPagesExists === true)
+		if ($this->smMenuExists === true && SMMenuLinkList::GetInstance()->GetReadyState() === true)
 		{
-			// Add basket and product categories to link pickers
-
 			$ds = new SMDataSource("SMShopProducts");
 			$products = $ds->Select("Category, CategoryId", "", "Category ASC");
 
-			if ($this->smMenuExists === true && SMMenuLinkList::GetInstance()->GetReadyState() === true)
+			$menuLinkList = SMMenuLinkList::GetInstance();
+			$added = array();
+
+			foreach ($products as $prod)
 			{
-				$menuLinkList = SMMenuLinkList::GetInstance();
-				$added = array();
+				if (in_array($prod["CategoryId"], $added, true) === true)
+					continue;
 
-				foreach ($products as $prod)
-				{
-					if (in_array($prod["CategoryId"], $added, true) === true)
-						continue;
-
-					$menuLinkList->AddLink($this->getTranslation("Title"), $prod["Category"], "shop/" . $prod["CategoryId"]);
-					$added[] = $prod["CategoryId"];
-				}
+				$menuLinkList->AddLink($this->getTranslation("Title"), $prod["Category"], "shop/" . $prod["CategoryId"]);
+				$added[] = $prod["CategoryId"];
 			}
+		}
 
-			if ($this->smPagesExists === true && SMPagesLinkList::GetInstance()->GetReadyState() === true)
+		if ($this->smPagesExists === true && SMPagesLinkList::GetInstance()->GetReadyState() === true)
+		{
+			$ds = new SMDataSource("SMShopProducts");
+			$products = $ds->Select("Category, CategoryId", "", "Category ASC");
+
+			$pagesLinkList = SMPagesLinkList::GetInstance();
+			$added = array();
+
+			foreach ($products as $prod)
 			{
-				$pagesLinkList = SMPagesLinkList::GetInstance();
-				$added = array();
+				if (in_array($prod["CategoryId"], $added, true) === true)
+					continue;
 
-				foreach ($products as $prod)
-				{
-					if (in_array($prod["CategoryId"], $added, true) === true)
-						continue;
-
-					$pagesLinkList->AddLink($this->getTranslation("Title"), $prod["Category"], "shop/" . $prod["CategoryId"]);
-					$added[] = $prod["CategoryId"];
-				}
+				$pagesLinkList->AddLink($this->getTranslation("Title"), $prod["Category"], "shop/" . $prod["CategoryId"]);
+				$added[] = $prod["CategoryId"];
 			}
 		}
 
