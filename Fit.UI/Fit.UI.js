@@ -1413,7 +1413,7 @@ Fit._internal.ControlBase = {};
 Fit._internal.ControlBase.Controls = {};
 
 /// <container name="Fit.Controls.ControlBase">
-/// 	Class from which all GUI Controls inherit
+/// 	Class from which all UI Controls extend
 /// </container>
 Fit.Controls.ControlBase = function(controlId)
 {
@@ -1915,7 +1915,7 @@ Fit.Controls.ControlBase = function(controlId)
 		}, 0);
 	}
 
-	// Private members (must be public in order to be accessible to controls inheriting from ControlBase)
+	// Private members (must be public in order to be accessible to controls extending from ControlBase)
 
 	this._internal = (this._internal ? this._internal : {});
 
@@ -2146,11 +2146,11 @@ Fit.Cookies = function()
 	/// 		Notice that Set/Get/Remove functions automatically apply the prefix to cookie names, so the use of a prefix
 	/// 		is completely transparent.
 	/// 	</description>
-	/// 	<param name="val" type="string" default="undefined"> If defined, changes cookie prefix </param>
+	/// 	<param name="val" type="string" default="undefined"> If defined, changes cookie prefix to specified value </param>
 	/// </function>
 	this.Prefix = function(val)
 	{
-		Fit.Validation.ExpectStringValue(val, true);
+		Fit.Validation.ExpectString(val, true);
 
 		if (Fit.Validation.IsSet(val) === true)
 		{
@@ -2224,6 +2224,8 @@ Fit.Cookies.Set = function(name, value, seconds, path)
 	if (value.indexOf(';') > -1)
 		Fit.Validation.ThrowError("Unable to set cookie - value contains illegal character: ';'");
 
+	value = value.replace(/\n/g, "\\n"); // Preserve line breaks which would otherwise break cookie value
+
 	var date = null;
 
 	if (Fit.Validation.IsSet(seconds) === true)
@@ -2255,7 +2257,7 @@ Fit.Cookies.Get = function(name)
 			cookie = cookie.substring(1, cookie.length);
 
 		if (cookie.indexOf(cookieName) === 0)
-			return cookie.substring(cookieName.length, cookie.length);
+			return cookie.substring(cookieName.length, cookie.length).replace(/\\n/g, "\n");
 	}
 
 	return null;
@@ -2359,6 +2361,11 @@ Fit.Data.CreateGuid = function(dashFormat)
 
 Fit.Math = {};
 
+/// <function container="Fit.Math" name="Round" access="public" static="true" returns="number">
+/// 	<description> Round off value to a number with the specified precision </description>
+/// 	<param name="value" type="number"> Number to round off </param>
+/// 	<param name="precision" type="integer"> Desired precision </param>
+/// </function>
 Fit.Math.Round = function(value, precision)
 {
 	Fit.Validation.ExpectNumber(value);
@@ -2373,6 +2380,17 @@ Fit.Math.Round = function(value, precision)
 	return res;
 }
 
+/// <function container="Fit.Math" name="Format" access="public" static="true" returns="string">
+/// 	<description>
+/// 		Format value to produce a number with the specified number of decimals.
+/// 		Value is properly rounded off to ensure best precision.
+/// 	</description>
+/// 	<param name="value" type="number"> Number to format </param>
+/// 	<param name="decimals" type="integer"> Desired number of decimals </param>
+/// 	<param name="decimalSeparator" type="string" default="undefined">
+/// 		If defined, the specified decimal separator will be used
+/// 	</param>
+/// </function>
 Fit.Math.Format = function(value, decimals, decimalSeparator)
 {
 	Fit.Validation.ExpectNumber(value);
@@ -2385,7 +2403,7 @@ Fit.Math.Format = function(value, decimals, decimalSeparator)
         return res.toString();
 
     var str = ((res % 1 === 0) ? res.toString() + ".0" : res.toString());
-	
+
     for (var i = str.split(".")[1].length ; i < decimals ; i++)
         str += "0";
 
@@ -4503,7 +4521,7 @@ Fit.Http.Request = function(url)
 /// <container name="Fit.Http.JsonRequest">
 /// 	Asynchronous HTTP request functionality (AJAX/WebService)
 /// 	optimized for exchanging data with the server in JSON format.
-/// 	Inheriting from Fit.Http.Request.
+/// 	Extending from Fit.Http.Request.
 ///
 /// 	// Example code
 ///
@@ -4987,13 +5005,14 @@ Fit.Controls.Button = function(controlId)
 
 		Fit.Events.AddHandler(element, "click", function(e)
 		{
-			me.Click();
+			if (me.Enabled() === true)
+				me.Click();
 		});
 		Fit.Events.AddHandler(element, "keydown", function(e)
 		{
 			var ev = Fit.Events.GetEvent(e);
 
-			if (ev.keyCode === 13 || ev.keyCode === 32) // Enter or Spacebar
+			if (me.Enabled() === true && (ev.keyCode === 13 || ev.keyCode === 32)) // Enter or Spacebar
 			{
 				me.Click();
 				Fit.Events.PreventDefault(ev);
@@ -5099,7 +5118,7 @@ Fit.Controls.Button = function(controlId)
 
 	/// <function container="Fit.Controls.Button" name="Focused" access="public" returns="boolean">
 	/// 	<description> Get/set value indicating whether control has focus </description>
-	/// 	<param name="value" type="boolean" default="undefined"> If defined, True assigns focus, False removes focus (blur) </param>
+	/// 	<param name="focus" type="boolean" default="undefined"> If defined, True assigns focus, False removes focus (blur) </param>
 	/// </function>
 	this.Focused = function(focus)
 	{
@@ -5193,13 +5212,10 @@ Fit.Controls.Button = function(controlId)
 	/// </function>
 	this.Click = function()
 	{
-		if (me.Enabled() === true)
+		Fit.Array.ForEach(onClickHandlers, function(handler)
 		{
-			Fit.Array.ForEach(onClickHandlers, function(handler)
-			{
-				handler(me);
-			});
-		}
+			handler(me);
+		});
 	}
 
 	/// <function container="Fit.Controls.Button" name="GetDomElement" access="public" returns="DOMElement">
@@ -5276,6 +5292,244 @@ Fit.Controls.Button.Type =
 	/// </member>
 	Danger: "Danger"
 }
+/// <container name="Fit.Controls.CheckBox">
+/// 	Simple CheckBox control.
+/// 	Extending from Fit.Controls.ControlBase.
+/// </container>
+
+/// <function container="Fit.Controls.CheckBox" name="CheckBox" access="public">
+/// 	<description> Create instance of CheckBox control </description>
+/// 	<param name="ctlId" type="string"> Unique control ID </param>
+/// </function>
+Fit.Controls.CheckBox = function(ctlId)
+{
+	Fit.Validation.ExpectStringValue(ctlId);
+	Fit.Core.Extend(this, Fit.Controls.ControlBase).Apply(ctlId);
+
+	var me = this;
+	var checkbox = null;
+	var label = null;
+	var width = { Value: -1, Unit: "px" };	// Initial width - a value of -1 indicates that size adjusts to content
+	var orgChecked = false;
+	var isIe8 = (Fit.Browser.GetInfo().Name === "MSIE" && Fit.Browser.GetInfo().Version === 8);
+
+	// ============================================
+	// Init
+	// ============================================
+
+	function init()
+	{
+		me.AddCssClass("FitUiControlCheckBox");
+		me.GetDomElement().tabIndex = 0;
+
+		checkbox = document.createElement("div");
+		Fit.Dom.AddClass(checkbox, "fa");
+		Fit.Dom.AddClass(checkbox, "fa-check");
+
+		Fit.Events.AddHandler(me.GetDomElement(), "click", function(e)
+		{
+			if (me.Enabled() === true)
+			{
+				//var orgVal = orgChecked;
+				me.Checked(!me.Checked(), true);
+				//orgChecked = orgVal;
+			}
+		});
+		Fit.Events.AddHandler(me.GetDomElement(), "keydown", function(e)
+		{
+			var ev = Fit.Events.GetEvent(e);
+
+			if (me.Enabled() === true && ev.keyCode === 32) // Spacebar
+			{
+				//var orgVal = orgChecked;
+				me.Checked(!me.Checked(), true);
+				//orgChecked = orgVal;
+
+				Fit.Events.PreventDefault(ev); // Prevent scroll
+			}
+		});
+
+		label = document.createElement("span");
+
+		me._internal.AddDomElement(checkbox);
+		me._internal.AddDomElement(label);
+
+		me.Enabled(true);
+		me.Checked(false);
+		me.Width(-1);
+	}
+
+	// ============================================
+	// Public - overrides
+	// ============================================
+
+	// See documentation on ControlBase
+	this.Focused = function(focus)
+	{
+		Fit.Validation.ExpectBoolean(focus, true);
+
+		if (Fit.Validation.IsSet(focus) === true)
+		{
+			if (focus === true)
+				me.GetDomElement().focus();
+			else
+				me.GetDomElement().blur();
+		}
+
+		return (document.activeElement === me.GetDomElement());
+	}
+
+	// See documentation on ControlBase
+	this.Value = function(val)
+	{
+		Fit.Validation.ExpectString(val, true);
+
+		if (Fit.Validation.IsSet(val) === true)
+		{
+			var valStr = val.toLowerCase();
+
+			if (valStr === "true")
+			{
+				me.Checked(true);
+			}
+			else if (valStr === "false")
+			{
+				me.Checked(false);
+			}
+		}
+
+		return ((me.Checked() === true) ? "true" : "false");
+	}
+
+	/// <function container="Fit.Controls.CheckBox" name="Checked" access="public" returns="boolean">
+	/// 	<description> Get/set value indicating whether control is checked </description>
+	/// 	<param name="val" type="boolean" default="undefined"> If defined, control's checked state is updated to specified value </param>
+	/// </function>
+	this.Checked = function(val, preserveDirtyState) // preserveDirtyState is for internal use only - do not add to documentation!
+	{
+		Fit.Validation.ExpectBoolean(val, true);
+		Fit.Validation.ExpectBoolean(preserveDirtyState, true);
+
+		if (Fit.Validation.IsSet(val) === true)
+		{
+			var before = (Fit.Dom.Data(me.GetDomElement(), "checked") === "true");
+
+			Fit.Dom.Data(me.GetDomElement(), "checked", val.toString());
+
+			if (preserveDirtyState !== true)
+				orgChecked = (Fit.Dom.Data(me.GetDomElement(), "checked") === "true");
+
+			if (before !== val)
+			{
+				repaint();
+				me._internal.FireOnChange();
+			}
+		}
+
+		return (Fit.Dom.Data(me.GetDomElement(), "checked") === "true");
+	}
+
+	/// <function container="Fit.Controls.CheckBox" name="Width" access="public" returns="object">
+	/// 	<description> Get/set control width - returns object with Value and Unit properties </description>
+	/// 	<param name="val" type="number" default="undefined"> If defined, control width is updated to specified value. A value of -1 resets control width. </param>
+	/// 	<param name="unit" type="string" default="px"> If defined, control width is updated to specified CSS unit </param>
+	/// </function>
+	this.Width = function(val, unit) // Differs from ControlBase.Width(..) when -1 is passed - this control resets to width:auto while ControlBase resets to width:200px
+	{
+		Fit.Validation.ExpectNumber(val, true);
+		Fit.Validation.ExpectStringValue(unit, true);
+
+		if (Fit.Validation.IsSet(val) === true)
+		{
+			if (val > -1)
+			{
+				width = { Value: val, Unit: ((Fit.Validation.IsSet(unit) === true) ? unit : "px") };
+				me.GetDomElement().style.width = width.Value + width.Unit;
+			}
+			else
+			{
+				width = { Value: -1, Unit: "px" };
+				me.GetDomElement().style.width = ""; // Notice: width:auto is applied in CheckBox.css
+			}
+		}
+
+		return width;
+	}
+
+	// See documentation on ControlBase
+	this.IsDirty = function()
+	{
+		return (orgChecked !== me.Checked());
+	}
+
+	// See documentation on ControlBase
+	this.Clear = function()
+	{
+		me.Checked(false);
+	}
+
+	// See documentation on ControlBase
+	this.Dispose = Fit.Core.CreateOverride(this.Dispose, function()
+	{
+		// This will destroy control - it will no longer work!
+
+		me = checkbox = label = width = orgChecked = isIe8 = null;
+
+		base();
+	});
+
+	// ============================================
+	// Public
+	// ============================================
+
+	/// <function container="Fit.Controls.CheckBox" name="Label" access="public" returns="string">
+	/// 	<description> Get/set label associated with checkbox </description>
+	/// 	<param name="val" type="string" default="undefined"> If defined, label is updated to specified value </param>
+	/// </function>
+	this.Label = function(val)
+	{
+		Fit.Validation.ExpectString(val, true);
+
+		if (Fit.Validation.IsSet(val) === true)
+		{
+			label.innerHTML = val;
+		}
+
+		return label.innerHTML;
+	}
+
+	/// <function container="Fit.Controls.CheckBox" name="Enabled" access="public" returns="boolean">
+	/// 	<description> Get/set value indicating whether control is enabled or not </description>
+	/// 	<param name="val" type="boolean" default="undefined"> If specified, True enables control, False disables it </param>
+	/// </function>
+	this.Enabled = function(val)
+	{
+		Fit.Validation.ExpectBoolean(val, true);
+
+		if (Fit.Validation.IsSet(val) === true)
+		{
+			Fit.Dom.Data(me.GetDomElement(), "enabled", val.toString());
+			me.GetDomElement().tabIndex = ((val === true) ? 0 : -1);
+		}
+
+		return (Fit.Dom.Data(me.GetDomElement(), "enabled") === "true");
+	}
+
+	// ============================================
+	// Private
+	// ============================================
+
+	function repaint()
+	{
+		if (isIe8 === true)
+		{
+			me.AddCssClass("FitUi_Non_Existing_CheckBox_Class");
+			me.RemoveCssClass("FitUi_Non_Existing_CheckBox_Class");
+		}
+	}
+
+	init();
+}
 /// <container name="Fit.Controls.ContextMenu">
 /// 	ContextMenu control allowing for quick access to select features.
 /// </container>
@@ -5290,6 +5544,7 @@ Fit.Controls.ContextMenu = function()
 	var prevFocused = null;
 	var detectBoundaries = true;
 	var highlightOnInitKeyStroke = true;
+	var isIe8 = (Fit.Browser.GetInfo().Name === "MSIE" && Fit.Browser.GetInfo().Version === 8);
 
 	var onShowing = [];
 	var onShown = [];
@@ -5753,7 +6008,7 @@ Fit.Controls.ContextMenu = function()
 	this.Dispose = function()
 	{
 		tree.Dispose();
-		tree = prevFocused = onShowing = onShown = onHide = onSelect = null;
+		me = tree = prevFocused = detectBoundaries = highlightOnInitKeyStroke = isIe8 = onShowing = onShown = onHide = onSelect = null;
 	}
 
 	// ============================================
@@ -5888,7 +6143,6 @@ Fit.Controls.ContextMenu = function()
 		}
 	}
 
-	var isIe8 = (Fit.Browser.GetInfo().Name === "MSIE" && Fit.Browser.GetInfo().Version === 8);
 	function repaint(f)
 	{
 		Fit.Validation.ExpectFunction(f, true);
@@ -6090,7 +6344,7 @@ Fit.Events.OnReady(function()
 });
 /// <container name="Fit.Controls.WSContextMenu">
 /// 	ContextMenu control allowing for quick access to select features provided by a WebService.
-/// 	Inheriting from Fit.Controls.ContextMenu.
+/// 	Extending from Fit.Controls.ContextMenu.
 /// </container>
 
 /// <function container="Fit.Controls.WSContextMenu" name="WSContextMenu" access="public">
@@ -6365,6 +6619,13 @@ Fit.Controls.WSContextMenu = function()
 
 	init();
 }
+/// <container name="Fit.Controls.Dialog">
+/// 	Simple Dialog control with support for Fit.UI buttons.
+/// </container>
+
+/// <function container="Fit.Controls.Dialog" name="Dialog" access="public">
+/// 	<description> Create instance of Dialog control </description>
+/// </function>
 Fit.Controls.Dialog = function()
 {
 	var me = this;
@@ -6423,6 +6684,8 @@ Fit.Controls.Dialog = function()
 			}
 		});
 
+		// Focus first button when clicking dialog or modal layer
+
 		Fit.Events.AddHandler(dialog, "click", function(e)
 		{
 			if (buttons.children.length > 0 && (document.activeElement === null || Fit.Dom.Contained(dialog, document.activeElement) === false))
@@ -6440,6 +6703,10 @@ Fit.Controls.Dialog = function()
 	// Public
 	// ============================================
 
+	/// <function container="Fit.Controls.Dialog" name="Modal" access="public" returns="boolean">
+	/// 	<description> Get/set value indicating whether dialog is modal or not </description>
+	/// 	<param name="val" type="boolean" default="undefined"> If specified, True enables modal mode, False disables it </param>
+	/// </function>
 	this.Modal = function(val)
 	{
 		Fit.Validation.ExpectBoolean(val, true);
@@ -6452,6 +6719,10 @@ Fit.Controls.Dialog = function()
 		return modal;
 	}
 
+	/// <function container="Fit.Controls.Dialog" name="Content" access="public" returns="string">
+	/// 	<description> Get/set dialog content </description>
+	/// 	<param name="val" type="string" default="undefined"> If specified, dialog content is updated with specified value </param>
+	/// </function>
 	this.Content = function(val)
 	{
 		Fit.Validation.ExpectString(val, true);
@@ -6464,12 +6735,19 @@ Fit.Controls.Dialog = function()
 		return content.innerHTML;
 	}
 
+	/// <function container="Fit.Controls.Dialog" name="AddButton" access="public">
+	/// 	<description> Add button to dialog </description>
+	/// 	<param name="btn" type="Fit.Controls.Button"> Instance of Fit.Controls.Button </param>
+	/// </function>
 	this.AddButton = function(btn)
 	{
 		Fit.Validation.ExpectInstance(btn, Fit.Controls.Button);
 		Fit.Dom.Add(buttons, btn.GetDomElement());
 	}
 
+	/// <function container="Fit.Controls.Dialog" name="Open" access="public">
+	/// 	<description> Open dialog </description>
+	/// </function>
 	this.Open = function()
 	{
 		Fit.Dom.Add(document.body, dialog);
@@ -6478,6 +6756,9 @@ Fit.Controls.Dialog = function()
 			Fit.Dom.Add(document.body, layer);
 	}
 
+	/// <function container="Fit.Controls.Dialog" name="Close" access="public">
+	/// 	<description> Close dialog </description>
+	/// </function>
 	this.Close = function()
 	{
 		Fit.Dom.Remove(dialog);
@@ -6486,9 +6767,22 @@ Fit.Controls.Dialog = function()
 			Fit.Dom.Remove(layer);
 	}
 
+	/// <function container="Fit.Controls.Dialog" name="GetDomElement" access="public" returns="DOMElement">
+	/// 	<description> Get DOMElement representing control </description>
+	/// </function>
 	this.GetDomElement = function()
 	{
 		return dialog;
+	}
+
+	/// <function container="Fit.Controls.Dialog" name="Dispose" access="public">
+	/// 	<description> Destroys component to free up memory </description>
+	/// </function>
+	this.Dispose = function()
+	{
+		Fit.Dom.Remove(dialog);
+		Fit.Dom.Remove(layer);
+		me = dialog = content = buttons = modal = layer = null;
 	}
 
 	init();
@@ -6540,21 +6834,36 @@ Fit.Controls.Dialog._internal.BaseDialog = function(content, showCancel, cb)
 	cmdOk.Focused(true);
 }
 
+/// <function container="Fit.Controls.Dialog" name="Alert" access="public" static="true">
+/// 	<description> Display alert dialog </description>
+/// 	<param name="content" type="string"> Content to display in alert dialog </param>
+/// 	<param name="cb" type="function" default="undefined"> Optional callback function invoked when OK button is clicked </param>
+/// </function>
 Fit.Controls.Dialog.Alert = function(content, cb)
 {
 	Fit.Validation.ExpectString(content);
 	Fit.Validation.ExpectFunction(cb, true);
 
-	content = content.toString();
-	Fit.Controls.Dialog._internal.BaseDialog(content, false, cb);
+	Fit.Controls.Dialog._internal.BaseDialog(content, false, function(res)
+	{
+		if (Fit.Validation.IsSet(cb) === true)
+			cb();
+	});
 }
 
+/// <function container="Fit.Controls.Dialog" name="Confirm" access="public" static="true">
+/// 	<description> Display confirmation dialog with OK and Cancel buttons </description>
+/// 	<param name="content" type="string"> Content to display in confirmation dialog </param>
+/// 	<param name="cb" type="function">
+/// 		Callback function invoked when a button is clicked.
+/// 		True is passed to callback function when OK is clicked, otherwise False.
+/// 	</param>
+/// </function>
 Fit.Controls.Dialog.Confirm = function(content, cb)
 {
 	Fit.Validation.ExpectString(content);
 	Fit.Validation.ExpectFunction(cb);
 
-	content = content.toString();
 	Fit.Controls.Dialog._internal.BaseDialog(content, true, cb);
 }
 // TODO - potentiale and fairly easy improvements:
@@ -8265,7 +8574,7 @@ Fit._internal.DropDown.Current = null;
 	init();
 }*/
 /// <container name="Fit.Controls.PickerBase">
-/// 	Class from which all Picker Controls inherit.
+/// 	Class from which all Picker Controls extend.
 /// 	Control developers must override: GetDomElement, Destroy.
 /// 	Overriding the following functions is optional:
 /// 	UpdateItemSelectionState, SetEventDispatcher, HandleEvent.
@@ -8558,7 +8867,7 @@ Fit.Controls.PickerBase = function(controlId)
 	// Private
 	// ============================================
 
-	// Private members (must be public in order to be accessible to host control and controls inheriting from PickerBase)
+	// Private members (must be public in order to be accessible to host control and controls extending from PickerBase)
 
 	this._internal = (this._internal ? this._internal : {});
 
@@ -9807,7 +10116,7 @@ Fit.Controls.FilePicker = function(ctlId)
 /// <container name="Fit.Controls.Input">
 /// 	Input control which allows for one or multiple lines of
 /// 	text, and features a Design Mode for rich HTML content.
-/// 	Inheriting from Fit.Controls.ControlBase.
+/// 	Extending from Fit.Controls.ControlBase.
 /// </container>
 
 /// <function container="Fit.Controls.Input" name="Input" access="public">
@@ -10201,7 +10510,7 @@ Fit.Controls.Input = function(ctlId)
 		// elsewhere when instanceCreated is fired, and only remove it from the DOM if this is not the case.
 		// This problem needs to be solved some other time as it may spawn other problems, such as determining
 		// the size of objects while being invisible. The CKEditor team may also solve the bug in an update.
-		if (Fit.Dom.IsRooted(me.GetDomElement()) === false) //if (me.GetDomElement().parentElement === null)
+		if (Fit.Dom.IsRooted(me.GetDomElement()) === false)
 		{
 			CKEDITOR._loading = false;
 			Fit.Validation.ThrowError("Control must be appended/rendered to DOM before DesignMode can be initialized");
@@ -13022,7 +13331,7 @@ Fit.Controls.TreeView.Node = function(displayTitle, nodeValue)
 /// <container name="Fit.Controls.WSTreeView">
 /// 	TreeView control allowing data from a
 /// 	WebService to be listed in a structured manner.
-/// 	Inheriting from Fit.Controls.TreeView.
+/// 	Extending from Fit.Controls.TreeView.
 ///
 /// 	Notice: WSTreeView works a bit differently from TreeView.
 /// 	Nodes are loaded on-demand, meaning when Selected(..) or Value(..)

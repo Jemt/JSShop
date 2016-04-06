@@ -2263,6 +2263,46 @@ div.FitUiControlButton[data-enabled="true"]:focus
 	outline-offset: 2px;
 	border: 1px solid #3B99FC\9; /* Legacy IE (9 and earlier) which does not support outline */
 }
+div.FitUiControlCheckBox
+{
+	cursor: pointer;
+	width: auto;
+
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+}
+
+div.FitUiControlCheckBox[data-enabled="false"]
+{
+	cursor: not-allowed;
+	opacity: 0.65;
+}
+
+div.FitUiControlCheckBox:focus
+{
+	outline: none; /* Chrome fix - even though tabIndex is -1, control is still outlined when clicked */
+}
+div.FitUiControlCheckBox[data-enabled="true"]:focus
+{
+	outline: 2px solid #3B99FC;
+	outline-offset: 2px;
+	border: 1px solid #3B99FC\9; /* Legacy IE (9 and earlier) which does not support outline */
+}
+
+div.FitUiControlCheckBox > div
+{
+	border: 1px solid #909090;
+	border-radius: 2px;
+	margin-right: 0.3em;
+	color: #333333;
+	background-color: #FFFFFF;
+}
+div.FitUiControlCheckBox[data-checked="false"] > div:before
+{
+    visibility: hidden;
+}
 div.FitUiControlContextMenu.FitUiControlTreeView
 {
 	border: 1px solid #A9A9A9;
@@ -2344,7 +2384,7 @@ div.FitUiControlContextMenu.FitUiControlTreeView
 div.FitUiControlDialog
 {
 	border: 1px solid #333333;
-	background: #FBFBFB;
+	background: #FFFFFF;
 	min-width: 200px;
 	max-width: 40%;
 
@@ -2415,11 +2455,10 @@ div.FitUiControlDialogModalLayer
 	left: 0px;
 	right: 0px;
 	z-index: 9999;
-}
-div.FitUiControlDialogModalLayer:not(#LagacyIE)
-{
+
 	background-color: #333333;
 	opacity: 0.5;
+	-ms-filter: "progid:DXImageTransform.Microsoft.Alpha(Opacity=50)";
 }
 div.FitUiControlDropDown
 {

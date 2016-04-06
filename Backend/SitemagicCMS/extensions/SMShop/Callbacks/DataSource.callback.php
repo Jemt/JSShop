@@ -50,21 +50,21 @@ $dataSourcesAllowed = array
 	(
 		"AuthRequired"		=> array("Create", "Update", "Delete"), // Retrieve and RetrieveAll does not require auth.
 		"XmlLockRequired"	=> array(),
-		"TimeOut"			=> -1,
-		"MemoryRequired"	=> -1,
+		"XmlTimeOut"		=> -1,
+		"XmlMemoryRequired"	=> -1,
 		"OrderBy"			=> "Category ASC, Title ASC",
 		"Fields"			=> array
 		(
-			"Id"					=> array("DataType" => "string", "MaxLength" => 50*8),
+			"Id"					=> array("DataType" => "string", "MaxLength" => 30*8),
 			"Category"				=> array("DataType" => "string", "MaxLength" => 50*8),
 			"CategoryId"			=> array("DataType" => "string", "MaxLength" => 50+20), // Only used to generate URLs (up to 50 ASCII characters + 20 characters for a hash code appended)
 			"Title"					=> array("DataType" => "string", "MaxLength" => 250*8),
 			"Description"			=> array("DataType" => "string", "MaxLength" => 1000*8),
 			"Images"				=> array("DataType" => "string", "MaxLength" => 1000),
-			"Price"					=> array("DataType" => "number", "MaxLength" => 10),
+			"Price"					=> array("DataType" => "number", "MaxLength" => 100),
+			"Vat"					=> array("DataType" => "number", "MaxLength" => 100),
 			"Currency"				=> array("DataType" => "string", "MaxLength" => 3),
-			"Vat"					=> array("DataType" => "number", "MaxLength" => 10),
-			"Weight"				=> array("DataType" => "number", "MaxLength" => 10),
+			"Weight"				=> array("DataType" => "number", "MaxLength" => 100),
 			"WeightUnit"			=> array("DataType" => "string", "MaxLength" => 3),
 			"DeliveryTime"			=> array("DataType" => "string", "MaxLength" => 50*8),
 			"DiscountExpression"	=> array("DataType" => "string", "MaxLength" => 250),
@@ -80,8 +80,7 @@ $dataSourcesAllowed = array
 		"OrderBy"			=> "",
 		"Fields"			=> array
 		(
-			"Id"					=> array("DataType" => "string", "MaxLength" => 50*8),
-			//"State"				=> array("DataType" => "string", "MaxLength" => 20),
+			"Id"					=> array("DataType" => "string", "MaxLength" => 50),
 			"Time"					=> array("DataType" => "number", "MaxLength" => 15, "ForceInitialValue" => (string)(time() * 1000)), // Timestamp in milliseconds (compatible with JS)
 			"ClientIp"				=> array("DataType" => "string", "MaxLength" => 45, "ForceInitialValue" => $ip), // IPv4 or IPv6
 			"Company"				=> array("DataType" => "string", "MaxLength" => 50*8),
@@ -96,18 +95,19 @@ $dataSourcesAllowed = array
 			"AltFirstName"			=> array("DataType" => "string", "MaxLength" => 50*8),
 			"AltLastName"			=> array("DataType" => "string", "MaxLength" => 50*8),
 			"AltAddress"			=> array("DataType" => "string", "MaxLength" => 50*8),
-			"AltZipCode"			=> array("DataType" => "number", "MaxLength" => 20),
+			"AltZipCode"			=> array("DataType" => "string", "MaxLength" => 20),
 			"AltCity"				=> array("DataType" => "string", "MaxLength" => 50*8),
-			"Price"					=> array("DataType" => "number", "MaxLength" => 10),
-			"Vat"					=> array("DataType" => "number", "MaxLength" => 10),
+			"Price"					=> array("DataType" => "number", "MaxLength" => 100),
+			"Vat"					=> array("DataType" => "number", "MaxLength" => 100),
 			"Currency"				=> array("DataType" => "string", "MaxLength" => 3),
-			"Weight"				=> array("DataType" => "number", "MaxLength" => 10),
+			"Weight"				=> array("DataType" => "number", "MaxLength" => 100),
 			"WeightUnit"			=> array("DataType" => "string", "MaxLength" => 3),
-			"ShippingExpense"		=> array("DataType" => "number", "MaxLength" => 10),
-			"ShippingVat"			=> array("DataType" => "number", "MaxLength" => 10),
-			"ShippingMessage"		=> array("DataType" => "string", "MaxLength" => 250*8)
-			//"PaymentType"			=> array("DataType" => "string", "MaxLength" => 20),
-			//"TransactionId"		=> array("DataType" => "string", "MaxLength" => 100)
+			"ShippingExpense"		=> array("DataType" => "number", "MaxLength" => 100),
+			"ShippingVat"			=> array("DataType" => "number", "MaxLength" => 100),
+			"ShippingMessage"		=> array("DataType" => "string", "MaxLength" => 250*8),
+			"PaymentMethod"			=> array("DataType" => "string", "MaxLength" => 50),
+			"TransactionId"			=> array("DataType" => "string", "MaxLength" => 100),
+			"State"					=> array("DataType" => "string", "MaxLength" => 20)
 		),
 		"Callbacks"				=> array(
 			"File"					=> dirname(__FILE__) . "/DSCallbacks/Order.php",
@@ -130,14 +130,14 @@ $dataSourcesAllowed = array
 		"OrderBy"			=> "",
 		"Fields"			=> array
 		(
-			"Id"					=> array("DataType" => "string", "MaxLength" => 50*8),
-			"OrderId"				=> array("DataType" => "string", "MaxLength" => 50*8),
-			"ProductId"				=> array("DataType" => "string", "MaxLength" => 50*8),
-			"UnitPrice"				=> array("DataType" => "number", "MaxLength" => 10),
+			"Id"					=> array("DataType" => "string", "MaxLength" => 50),
+			"OrderId"				=> array("DataType" => "string", "MaxLength" => 50),
+			"ProductId"				=> array("DataType" => "string", "MaxLength" => 30*8),
+			"UnitPrice"				=> array("DataType" => "number", "MaxLength" => 100),
+			"Vat"					=> array("DataType" => "number", "MaxLength" => 100),
 			"Currency"				=> array("DataType" => "string", "MaxLength" => 3),
-			"Units"					=> array("DataType" => "number", "MaxLength" => 10),
-			"Vat"					=> array("DataType" => "number", "MaxLength" => 10),
-			"Discount"				=> array("DataType" => "number", "MaxLength" => 10),
+			"Units"					=> array("DataType" => "number", "MaxLength" => 100),
+			"Discount"				=> array("DataType" => "number", "MaxLength" => 100),
 			"DiscountMessage"		=> array("DataType" => "string", "MaxLength" => 250*8)
 		)
 	)

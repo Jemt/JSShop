@@ -14,9 +14,9 @@ JSShop.Models.OrderEntry = function(entryId)
 		OrderId: "",			// string - related order entries must have the same Order ID
 		ProductId: "",			// string
 		UnitPrice: 0,			// number
+		Vat: 0,					// number
 		Currency: "",			// string
 		Units: 0,				// number
-		Vat: 0,					// number
 		Discount: 0,			// number
 		DiscountMessage: ""		// string
 	};

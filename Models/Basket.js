@@ -105,20 +105,24 @@ JSShop.Models.Basket.Clear = function()
 	JSShop.Cookies.Remove("Basket");
 }
 
-JSShop.Models.Basket.CreateOrder = function(cbSuccess)
+JSShop.Models.Basket.CreateOrder = function(order, cbSuccess, cbFailure)
 {
+	Fit.Validation.ExpectInstance(order, JSShop.Models.Order);
 	Fit.Validation.ExpectFunction(cbSuccess);
+	Fit.Validation.ExpectFunction(cbFailure, true);
 
 	// NOTICE:
 	// Backend is responsible for calculating discounts,
 	// shipping expence, VAT, totals, etc., to prevent
 	// malicious users from tampering with data.
+	// Backend can optionally push these information
+	// back to the client, to update the Order model.
 
 	var basketData = JSShop.Cookies.Get("Basket");
 	var basket = ((basketData !== null) ? JSON.parse(basketData) : { Items: [] });
 
-	var order = new JSShop.Models.Order(Fit.Data.CreateGuid());
 	var orderEntries = [];
+	var failure = false;
 
 	Fit.Array.ForEach(basket.Items, function(item) // Consider batching these operations for better performance
 	{
@@ -132,10 +136,34 @@ JSShop.Models.Basket.CreateOrder = function(cbSuccess)
 
 			if (orderEntries.length === basket.Items.length)
 			{
-				order.Create(function(oReq, oModel)
+				if (failure === false)
 				{
-					cbSuccess(order);
-				});
+					order.Create(function(oReq, oModel)
+					{
+						cbSuccess(order);
+					},
+					function(oReq, oModel)
+					{
+						if (Fit.Validation.IsSet(cbFailure) === true)
+							cbFailure(order);
+					});
+				}
+				else
+				{
+					if (Fit.Validation.IsSet(cbFailure) === true)
+						cbFailure(order);
+				}
+			}
+		},
+		function(eReq, eModel)
+		{
+			Fit.Array.Add(orderEntries, entry);
+			failure = true;
+
+			if (orderEntries.length === basket.Items.length)
+			{
+				if (Fit.Validation.IsSet(cbFailure) === true)
+					cbFailure(order);
 			}
 		});
 	});

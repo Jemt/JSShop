@@ -15,18 +15,7 @@ function SMShopDeleteOrderEntries($orderId)
 
 function SMShopProcessNewOrder(SMKeyValueCollection $order)
 {
-	// Obtain order ID
-
-	SMAttributes::Lock(); // Prevent two sessions from obtaining the same Order ID
-	SMAttributes::Reload(false); // No data will be lost when reloading attributes from a callback since no extensions are being executed
-
-	$orderIdStr = SMAttributes::GetAttribute("SMShopNextOrderId");
-	$orderId = (($orderIdStr !== null) ? (int)$orderIdStr : 1);
-
-	SMAttributes::SetAttribute("SMShopNextOrderId", (string)($orderId + 1));
-	SMAttributes::Commit(); // Also releases lock
-
-	// Load order entries
+	// Variables
 
 	$eDs = new SMDataSource("SMShopOrderEntries");
 	$pDs = new SMDataSource("SMShopProducts");
@@ -47,10 +36,35 @@ function SMShopProcessNewOrder(SMKeyValueCollection $order)
 	$shippingExpense = 0;
 	$shippingVat = 0;
 
+	// Load order entries
+
 	if ($eDs->GetDataSourceType() === SMDataSourceType::$Xml)
 		$eDs->Lock();
 
 	$entries = $eDs->Select("*", "OrderId = '" . $eDs->Escape($order["Id"]) . "'");
+
+	// Ensure that order has order entries associated
+
+	if (count($entries) === 0) // Unlikely to happen, unless Order was created programmatically using JS API
+	{
+		header("HTTP/1.1 500 Internal Server Error");
+		echo "Inconsistent order - no associated order entries found (must be created first)";
+		exit;
+	}
+
+	// Obtain new order ID (order was created with a temporary ID (GUID) generated client side)
+
+	SMAttributes::Lock(); // Prevent two sessions from obtaining the same Order ID
+	SMAttributes::Reload(false); // No data will be lost when reloading attributes from a callback since no extensions are being executed
+
+	$orderIdStr = SMAttributes::GetAttribute("SMShopNextOrderId");
+	$orderId = (($orderIdStr !== null) ? (int)$orderIdStr : 1);
+
+	SMAttributes::SetAttribute("SMShopNextOrderId", (string)($orderId + 1));
+	SMAttributes::Commit(); // Also releases lock
+
+	// Loop through order entries to extract currency, calculate
+	// discounts/totals/VAT, and update entries with these information.
 
 	foreach ($entries as $entry)
 	{
@@ -223,11 +237,13 @@ function SMShopProcessNewOrder(SMKeyValueCollection $order)
 	$order["Price"] = (string)$priceTotal;
 	$order["Vat"] = (string)$vatTotal;
 	$order["Currency"] = $currency;
-	$order["Weight"] = (string)$weight;
+	$order["Weight"] = (string)$weightTotal;
 	$order["WeightUnit"] = $weightUnit;
 	$order["ShippingExpense"] = (string)$shippingExpense;
 	$order["ShippingVat"] = (string)$shippingVat;
 	$order["ShippingMessage"] = (($shippingExpenseMessage !== null) ? $shippingExpenseMessage : "");
+	$order["TransactionId"] = "";
+	$order["State"] = "Initial";
 }
 
 ?>

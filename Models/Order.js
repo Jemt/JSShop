@@ -11,7 +11,6 @@ JSShop.Models.Order = function(orderId)
 	var properties =
 	{
 		Id: orderId,						// string
-		//State: "",						// string
 		Time: -1,							// number
 		ClientIp: "",						// string
 		Company: "",						// string
@@ -26,7 +25,7 @@ JSShop.Models.Order = function(orderId)
 		AltFirstName: "",					// string
 		AltLastName: "",					// string
 		AltAddress: "",						// string
-		AltZipCode: 0,						// number
+		AltZipCode: "",						// string
 		AltCity: "",						// string
 		Price: 0,							// number
 		Vat: 0,								// number
@@ -35,9 +34,10 @@ JSShop.Models.Order = function(orderId)
 		WeightUnit: "",						// string
 		ShippingExpense: 0,					// number
 		ShippingVat: 0,						// number
-		ShippingMessage: ""					// string
-		//PaymentType: "",					// string
-		//TransactionId: ""					// string
+		ShippingMessage: "",				// string
+		PaymentMethod: "",					// string
+		TransactionId: "",					// string
+		State: ""							// string
 	};
 
 	function init()

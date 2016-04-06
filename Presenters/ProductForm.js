@@ -40,7 +40,8 @@ JSShop.Presenters.ProductForm = function()
 
 		// Load view
 
-		Fit.Loader.LoadStyleSheet(JSShop.GetPath() + "/Views/ProductForm.css");
+		if (document.querySelector("link[href*='/Views/ProductForm.css']") === null) // Might have been loaded by CMS to prevent flickering (FOUC - flash of unstyled content)
+			Fit.Loader.LoadStyleSheet(JSShop.GetPath() + "/Views/ProductForm.css");
 
 		var req = new Fit.Http.Request(JSShop.GetPath() + "/Views/ProductForm.html");
 		req.OnSuccess(function(sender)
@@ -171,7 +172,7 @@ JSShop.Presenters.ProductForm = function()
 		txtId = new Fit.Controls.Input("JSShopProductId");
 		txtId.Width(350, "px");
 		txtId.Required(true);
-		txtId.SetValidationCallback(function(val) { return (val.length <= 50); }, lang.MaxLengthExceeded);
+		txtId.SetValidationCallback(function(val) { return (val.length <= 30); }, lang.MaxLengthExceeded);
 		txtId.Scope("JSShopProductForm");
 
 		txtTitle = new Fit.Controls.Input("JSShopProductTitle");

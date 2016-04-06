@@ -16,8 +16,8 @@ JSShop.Models.Product = function(itemId)
 		Description: "",		// string
 		Images: "",				// string
 		Price: 0,				// number
-		Currency: "",			// string
 		Vat: 0,					// number
+		Currency: "",			// string
 		Weight: 0,				// number
 		WeightUnit: "",			// string
 		DeliveryTime: "",		// string
