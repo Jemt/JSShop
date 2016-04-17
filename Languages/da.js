@@ -31,11 +31,7 @@
 			Clear:				"Rens",
 			Delete:				"Slet",
 			DeleteWarning:		"Slet produkt?",
-			ImagesNotRemoved:	"Et eller flere billeder kunne ikke slettes",
-			FieldRequired:		"Feltet er krævet",
-			InvalidValue:		"Ugyldig værdi indtastet",
-			MaxLengthExceeded:	"Værdien indtastet overstiger det maksimalt tilladte antal karakterer",
-			InvalidValues:		"Ret venligst ugyldige eller manglende værdier"
+			ImagesNotRemoved:	"Et eller flere billeder kunne ikke slettes"
 		},
 
 		ProductList:
@@ -59,10 +55,43 @@
 			NumberOfUnits:		"Antal enheder"
 		},
 
+		OrderForm:
+		{
+			CustomerDetails:	"Kundeinformation",
+			Company:			"Firma",
+			FirstName:			"Fornavn",
+			LastName:			"Efternavn",
+			Address:			"Addresse",
+			ZipCode:			"Postnummer",
+			City:				"By",
+			Email:				"E-mail",
+			Phone:				"Telefon",
+			Message:			"Besked",
+			RememberMe:			"Husk mig",
+			AlternativeAddress:	"Alternativ leveringsaddresse",
+			Payment:			"Betaling",
+			Terms:				"Handelsbetingelser",
+			PaymentAndTerms:	"Betaling og handelsbetingelser",
+			PaymentMethod:		"Betalingsmetode",
+			AcceptTerms:		"Jeg accepterer handelsbetingelserne",
+			TermsRequired:		"Accepterer venligst handelsbetingelserne for at fortsætte",
+			Read:				"Læs",
+			Continue:			"Fortsæt",
+			OrderReceived:		"Din ordre er modtaget - tak",
+			MissingPhoneNumber:	"Indtast venligst dit telefonnummer hvis du har et",
+			ContinueWithout:	"Fortsæt uden",
+			AddPhoneNumber:		"Tilføj telefonnummer",
+			PartialAltAddress:	"Du har kun delvist udfyldt felterne under Alternativ Leveringsadresse - udfyld venligst resten, eller slå Alternativ Leveringsadresse fra"
+		},
+
 		Common:
 		{
 			Ok:					"OK",
-			Cancel:				"Annuller"
+			Cancel:				"Annuller",
+			Required:			"Feltet skal udfyldes",
+			MaxLengthExceeded:	"Værdien indtastet overstiger det maksimalt tilladte antal karakterer",
+			InvalidValue:		"Ugyldig værdi",
+			InvalidEntries:		"Et eller flere felter er ikke udfyldt korrekt"
 		}
 	};
 })();

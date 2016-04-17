@@ -21,6 +21,7 @@ JSShop.Models.Order = function(orderId)
 		City: "",							// string
 		Email: "",							// string
 		Phone: "",							// string
+		Message: "",						// string
 		AltCompany: "",						// string
 		AltFirstName: "",					// string
 		AltLastName: "",					// string

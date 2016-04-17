@@ -25,16 +25,12 @@ div#JSShop-WeightUnit-Control
 	float: left;
 	font-size: 0.80em;
 }
-div#JSShopProductCurrency div.FitUiControlError,
-div#JSShopProductWeightUnit div.FitUiControlError
-{
-    left: 130px;
-}
 
 /* Right align buttons */
 table.JSShopProductForm td#JSShop-Buttons
 {
 	text-align: right;
+	padding-right: 2em; /* Textarea's maximize button expand cells 2em */
 }
 table.JSShopProductForm td#JSShop-Buttons div.FitUiControlButton
 {
@@ -45,7 +41,7 @@ table.JSShopProductForm td#JSShop-Buttons div.FitUiControlButton
 table.JSShopProductForm
 {
 	float: left;
-	margin-right: 50px;
+	margin-right: 35px;
 }
 div.JSShopProductFormImages
 {

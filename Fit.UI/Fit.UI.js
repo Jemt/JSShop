@@ -375,7 +375,7 @@ Fit.GetPath = function()
 Fit.Validation = {};
 
 Fit._internal.Validation = {};
-Fit._internal.Validation.DebugMode = true; // TODO: When ready for production: Remove or set False!
+Fit._internal.Validation.DebugMode = true;
 Fit._internal.Validation.Clone = null;
 
 // ==========================================================
@@ -546,7 +546,12 @@ Fit.Validation.ExpectCollection = function(val, allowNotSet)
 	if (allowNotSet === true && (val === undefined || val === null))
 		return;
 
-	if ((val instanceof NodeList) === false && (window.StaticNodeList && (val instanceof StaticNodeList) === false) && (val instanceof HTMLCollection) === false && (val instanceof Array) === false)
+	if (!window.StaticNodeList)
+		window.StaticNodeList = function() {};
+	if (!window.FileList)
+		window.FileList = function() {};
+
+	if ((val instanceof NodeList) === false && (val instanceof StaticNodeList) === false && (val instanceof FileList) === false && (val instanceof HTMLCollection) === false && (val instanceof Array) === false)
 		Fit.Validation.ThrowError("Value '" + val + "' is not a valid collection");
 }
 
@@ -702,10 +707,13 @@ Fit.Validation.ThrowError = function(msg)
 	{
 		var stackTrace = Fit.Validation.GetStackTrace();
 		alert("ThrowError: " + msg + ((stackTrace !== "") ? "\n\n" : "") + stackTrace);
-	}
 
-	if (window.console && console.trace)
-		console.trace();
+		if (window.console && console.trace)
+		{
+			console.log(msg);
+			console.trace();
+		}
+	}
 
 	throw new Error(msg); // Never change this behaviour - we should always re-throw the error to terminate execution
 }
@@ -755,9 +763,6 @@ Fit.Validation.Enabled = function(val)
 
 	return (Fit._internal.Validation.DebugMode === true);
 }
-
-if (Fit._internal.Validation.DebugMode !== true)
-	Fit.Validation.Enabled(false);
 /// <container name="Fit.Array">
 /// 	Functionality extending the capabilities of native JS arrays
 /// </container>
@@ -792,13 +797,16 @@ Fit.Array.ForEach = function(obj, callback) // obj not validated - passing null/
 	if (Fit._internal.Array.isCollectionType(obj) === true)
 	{
 		var count = obj.length;
+		var res = false;
 
 		for (var i = 0 ; i < obj.length ; i++)
 		{
+			res = callback(obj[i]);
+
 			if (obj.length !== count)
 				Fit.Validation.ThrowError("Collection was modified while iterating objects");
 
-			if (callback(obj[i]) === false)
+			if (res === false)
 				return false;
 		}
 	}
@@ -1023,7 +1031,7 @@ Fit.Array.Contains = function(arr, obj) // obj not validated - passing any objec
 /// </function>
 Fit.Array.Copy = function(arr)
 {
-	Fit.Validation.ExpectArray(arr);
+	Fit.Validation.ExpectCollection(arr);
 
 	var newArr = [];
 	Fit.Array.ForEach(arr, function(item)
@@ -1031,6 +1039,25 @@ Fit.Array.Copy = function(arr)
 		newArr.push(item);
 	});
 	return newArr;
+
+	/*if (Fit._internal.Array.isCollectionType(coll) === true)
+	{
+		var newArr = [];
+		Fit.Array.ForEach(coll, function(item)
+		{
+			newArr.push(item);
+		});
+		return newArr;
+	}
+	else
+	{
+		var newObjArr = {};
+		Fit.Array.ForEach(coll, function(key)
+		{
+			newObjArr[key] = coll[key];
+		});
+		return newObjArr;
+	}*/
 }
 
 /// <function container="Fit.Array" name="ToArray" access="public" static="true" returns="array">
@@ -1055,7 +1082,27 @@ Fit._internal.Array = {};
 
 Fit._internal.Array.isCollectionType = function(obj) // Returns True if obj is a collection that can be iterated using a .length property
 {
-	return (obj instanceof Array || obj instanceof NodeList || (window.FileList && obj instanceof FileList) || (window.StaticNodeList && obj instanceof StaticNodeList) || obj instanceof HTMLCollection);
+	var debug = Fit._internal.Validation.DebugMode;
+	Fit._internal.Validation.DebugMode = false; // Prevent alerts in debug mode
+
+	var result = false;
+
+	try
+	{
+		Fit.Validation.ExpectCollection(obj);
+		result = true;
+	}
+	catch (err) { }
+
+	Fit._internal.Validation.DebugMode = debug;
+	return result;
+
+	/*if (!window.FileList)
+		window.FileList = function() {};
+	if (!window.StaticNodeList)
+		window.StaticNodeList = function() {};
+
+	return (obj instanceof Array || obj instanceof NodeList || obj instanceof FileList || obj instanceof StaticNodeList || obj instanceof HTMLCollection);*/
 }
 
 /*
@@ -1489,9 +1536,9 @@ Fit.Controls.ControlBase = function(controlId)
 	var validationExpr = null;
 	var validationError = null;
 	var validationErrorType = -1; // 0 = Required, 1 = RegEx validation, 2 = Callback validation
-	var lblValidationError = null;
 	var validationCallbackFunc = null;
 	var validationCallbackError = null;
+	var lazyValidation = false;
 	var onChangeHandlers = [];
 	var onFocusHandlers = [];
 	var onBlurHandlers = [];
@@ -1500,6 +1547,7 @@ Fit.Controls.ControlBase = function(controlId)
 	var txtValue = null;
 	var txtDirty = null;
 	var txtValid = null;
+	var isIe8 = (Fit.Browser.GetInfo().Name === "MSIE" && Fit.Browser.GetInfo().Version === 8);
 
 	function init()
 	{
@@ -1509,6 +1557,7 @@ Fit.Controls.ControlBase = function(controlId)
 		Fit.Dom.AddClass(container, "FitUiControl");
 
 		me._internal.Data("focused", "false");
+		me._internal.Data("valid", "true");
 
 		// Add hidden inputs which are automatically populated with
 		// control value and state information when control is updated.
@@ -1536,7 +1585,10 @@ Fit.Controls.ControlBase = function(controlId)
 
 			if (me.AutoPostBack() === true && document.forms.length > 0)
 			{
-				document.forms[0].submit();
+				setTimeout(function() // Postpone to allow other handlers to execute before postback
+				{
+					document.forms[0].submit();
+				}, 0);
 			}
 		});
 
@@ -1552,6 +1604,12 @@ Fit.Controls.ControlBase = function(controlId)
 			container.onfocusin = onFocusIn;
 			container.onfocusout = onFocusOut;
 		}
+
+		me.OnBlur(function(sender)
+		{
+			if (lazyValidation === true)
+				me._internal.Validate(true);
+		});
 	}
 
 	// ============================================
@@ -1606,7 +1664,7 @@ Fit.Controls.ControlBase = function(controlId)
 		// This will destroy control - it will no longer work!
 
 		Fit.Dom.Remove(container);
-		me = id = container = width = height = scope = required = validationExpr = validationError = validationErrorType = lblValidationError = validationCallbackFunc = validationCallbackError = onChangeHandlers = onFocusHandlers = onBlurHandlers = hasFocus = focusBlurTimeout = txtValue = txtDirty = txtValid = null;
+		me = id = container = width = height = scope = required = validationExpr = validationError = validationErrorType = validationCallbackFunc = validationCallbackError = onChangeHandlers = onFocusHandlers = onBlurHandlers = hasFocus = focusBlurTimeout = txtValue = txtDirty = txtValid = isIe8 = null;
 		delete Fit._internal.ControlBase.Controls[controlId];
 	}
 
@@ -1835,6 +1893,24 @@ Fit.Controls.ControlBase = function(controlId)
 		return true;
 	}
 
+	this.LazyValidation = function(val) // Make control appear valid until user touches it, or until Fit.Controls.ValidateAll(..) is invoked
+	{
+		Fit.Validation.ExpectBoolean(val, true);
+
+		if (Fit.Validation.IsSet(val) === true)
+		{
+			lazyValidation = val;
+
+			if (lazyValidation === true)
+			{
+				me._internal.Data("valid", "true");
+				me._internal.Data("errormessage", null);
+			}
+		}
+
+		return lazyValidation;
+	}
+
 	// ============================================
 	// Events
 	// ============================================
@@ -1895,7 +1971,13 @@ Fit.Controls.ControlBase = function(controlId)
 		// to another) which may fire both Focus and Blur multiple times. When Focus fires,
 		// any previous Blur event is canceled. When Blur fires, any previous Focus event is
 		// canceled. The last event fired takes precedence and fires when JS thread is released.
-		focusBlurTimeout = setTimeout(me._internal.FireOnFocus, 0);
+		focusBlurTimeout = setTimeout(function()
+		{
+			if (me === null)
+				return; // Control was disposed
+
+			me._internal.FireOnFocus();
+		}, 0);
 	}
 
 	function onFocusOut(e)
@@ -1910,6 +1992,9 @@ Fit.Controls.ControlBase = function(controlId)
 
 		focusBlurTimeout = setTimeout(function()
 		{
+			if (me === null)
+				return; // Control was disposed
+
 			hasFocus = false; // Control has lost focus, allow OnFocus to fire again when it regains focus
 			me._internal.FireOnBlur();
 		}, 0);
@@ -1922,6 +2007,7 @@ Fit.Controls.ControlBase = function(controlId)
 		this._internal.FireOnChange = function()
 		{
 			me._internal.Validate();
+
 			Fit.Array.ForEach(onChangeHandlers, function(cb)
 			{
 				cb(me);
@@ -1931,6 +2017,7 @@ Fit.Controls.ControlBase = function(controlId)
 		this._internal.FireOnFocus = function()
 		{
 			me._internal.Data("focused", "true");
+			me._internal.Repaint();
 
 			Fit.Array.ForEach(onFocusHandlers, function(cb)
 			{
@@ -1941,6 +2028,7 @@ Fit.Controls.ControlBase = function(controlId)
 		this._internal.FireOnBlur = function()
 		{
 			me._internal.Data("focused", "false");
+			me._internal.Repaint();
 
 			Fit.Array.ForEach(onBlurHandlers, function(cb)
 			{
@@ -1977,7 +2065,7 @@ Fit.Controls.ControlBase = function(controlId)
 			Fit.Validation.ExpectStringValue(key);
 			Fit.Validation.ExpectString(val, true);
 
-			if (Fit.Validation.IsSet(val) === true)
+			if (Fit.Validation.IsSet(val) === true || val === null)
 				Fit.Dom.Data(container, key, val);
 
 			return Fit.Dom.Data(container, key);
@@ -1995,62 +2083,62 @@ Fit.Controls.ControlBase = function(controlId)
 			Fit.Dom.Remove(elm);
 		},
 
-		this._internal.Validate = function()
+		this._internal.Validate = function(force)
 		{
-			if (container.parentElement === null)
-				return; // Not rendered yet!
+			Fit.Validation.ExpectBoolean(force, true);
+
+			if (lazyValidation === true && me.Focused() === false && force !== true)
+				return;
+
+			if (me.IsValid() === valid)
+				return;
 
 			var valid = me.IsValid();
 
-			if (valid === false && lblValidationError === null)
+			me._internal.Data("valid", valid.toString());
+
+			if (valid === false)
 			{
-				// Add error indicator
-
-				lblValidationError = document.createElement("div");
-				lblValidationError.title = "";
-				lblValidationError.onclick = function() { if (lblValidationError.title !== "") alert(lblValidationError.title); };
-				Fit.Dom.AddClass(lblValidationError, "fa");
-				Fit.Dom.AddClass(lblValidationError, "fa-exclamation-circle");
-				Fit.Dom.AddClass(lblValidationError, "FitUiControlError");
-
 				if (validationErrorType === 0)
-					lblValidationError.title = Fit.Language.Translations.Required;
+					me._internal.Data("errormessage", Fit.Language.Translations.Required);
 				else if (validationErrorType === 1 && validationError !== null)
-					lblValidationError.title = validationError;
+					me._internal.Data("errormessage", validationError.replace("\r", "").replace(/<br.*>/i, "\n"));
 				else if (validationErrorType === 2 && validationCallbackError !== null)
-					lblValidationError.title = validationCallbackError;
-
-				Fit.Dom.InsertBefore(container.firstChild, lblValidationError);
+					me._internal.Data("errormessage", validationCallbackError.replace("\r", "").replace(/<br.*>/i, "\n"));
 			}
-			else if (valid === false && lblValidationError !== null)
+			else
 			{
-				// Update error indicator - make sure error indicator contains correct description
-
-				lblValidationError.title = "";
-
-				if (validationErrorType === 0)
-					lblValidationError.title = Fit.Language.Translations.Required;
-				else if (validationErrorType === 1 && validationError !== null)
-					lblValidationError.title = validationError;
-				else if (validationErrorType === 2 && validationCallbackError !== null)
-					lblValidationError.title = validationCallbackError;
+				me._internal.Data("errormessage", null);
 			}
-			else if (valid === true && lblValidationError !== null)
+
+			me._internal.Repaint();
+		}
+
+		this._internal.Repaint = function(f) // Use callback function if a repaint is required both before and after a given operation, which often requires JS thread to be released on IE
+		{
+			Fit.Validation.ExpectFunction(f, true);
+
+			var cb = ((Fit.Validation.IsSet(f) === true) ? f : function() {});
+
+			if (isIe8 === false)
 			{
-				// Update error indicator - temporarily show success indicator when invalid value is corrected
+				cb();
+			}
+			else
+			{
+				// Flickering may occure on IE8 when updating UI over time
+				// (UI update + JS thread released + UI updates again "later").
 
-				Fit.Dom.RemoveClass(lblValidationError, "fa-exclamation-circle");
-				Fit.Dom.AddClass(lblValidationError, "fa-thumbs-up");
-				Fit.Dom.AddClass(lblValidationError, "FitUiControlErrorCorrected");
-				lblValidationError.onclick = null;
-
-				var lblValidationErrorClosure = lblValidationError;
-				lblValidationError = null;
+				Fit.Dom.AddClass(me.GetDomElement(), "FitUi_Non_Existing_ControlBase_Class");
+				Fit.Dom.RemoveClass(me.GetDomElement(), "FitUi_Non_Existing_ControlBase_Class");
 
 				setTimeout(function()
 				{
-					Fit.Dom.Remove(lblValidationErrorClosure);
-				}, 1000);
+					cb();
+
+					Fit.Dom.AddClass(me.GetDomElement(), "FitUi_Non_Existing_ControlBase_Class");
+					Fit.Dom.RemoveClass(me.GetDomElement(), "FitUi_Non_Existing_ControlBase_Class");
+				}, 0);
 			}
 		}
 
@@ -2097,10 +2185,12 @@ Fit.Controls.ValidateAll = function(scope)
 		if (Fit.Validation.IsSet(scope) === true && control.Scope() !== scope)
 			return;
 
+		control._internal.Validate(true);
+
 		if (control.IsValid() === false)
 		{
 			result = false;
-			return false;
+			//return false;
 		}
 	});
 	return result;
@@ -2117,11 +2207,16 @@ Fit.Controls.ValidateAll = function(scope)
 Fit.Cookies = function()
 {
 	var me = this;
-	var path = location.pathname.match(/^.*\//)[0];
+	var path = location.pathname.match(/^.*\//)[0]; // Examples: / OR /sub/ OR /sub/sub/sub/
 	var prefix = "";
 
 	function init()
 	{
+		// Remove trailing slash for path determined automatically,
+		// to prevent double slashes when doing this: cookieContainer.Prefix() + "/sub"
+		// Actually a trailing slash should be used for the path, but fortunately
+		// Fit.Cookies.Set(..) makes sure to add it if missing.
+		path = path.substring(0, path.length - 1);
 	}
 
 	/// <function container="Fit.Cookies" name="Path" access="public" returns="string">
@@ -2249,7 +2344,7 @@ Fit.Cookies.Get = function(name)
 	var cookies = document.cookie.split(";");
 	var cookie = null;
 
-	for (i = 0 ; i < cookies.length ; i++)
+	for (var i = 0 ; i < cookies.length ; i++)
 	{
 		cookie = cookies[i];
 
@@ -3967,6 +4062,7 @@ Fit._internal.Events.MutationObserverIntervalId = -1;
 /// 	<description>
 /// 		Registers mutation observer which is invoked when a DOMElement is updated. By default
 /// 		only attributes are observed. Use deep flag to have children and character data observed too.
+/// 		An observer ID is returned which can be used to remove mutation observer.
 /// 		Important: Mutation observers should be removed when no longer needed for better performance!
 /// 		To remove an observer from within the observer function itself, simply call disconnect().
 /// 	</description>
@@ -4047,14 +4143,19 @@ Fit.Events.RemoveMutationObserver = function()
 		Fit.Validation.ExpectInteger(id);
 	}
 
+	var found = null;
+
 	Fit.Array.ForEach(Fit._internal.Events.MutationObservers, function(mo)
 	{
 		if ((Fit.Validation.IsSet(id) === true && mo.Id === id) || (mo.Element === elm && mo.Observer === obs && mo.Deep === ((Fit.Validation.IsSet(deep) === true) ? deep : false)))
 		{
-			Fit.Array.Remove(Fit._internal.Events.MutationObservers, mo);
+			found = mo;
 			return false; // Break loop
 		}
 	});
+
+	if (found !== null)
+		Fit.Array.Remove(Fit._internal.Events.MutationObservers, found);
 
 	// Remove event handlers if all mutation observers have been removed
 
@@ -5245,13 +5346,16 @@ Fit.Controls.Button = function(controlId)
 		}
 	}
 
-	/// <function container="Fit.Controls.ControlBase" name="Dispose" access="public">
+	/// <function container="Fit.Controls.Button" name="Dispose" access="public">
 	/// 	<description> Destroys control to free up memory </description>
 	/// </function>
 	this.Dispose = function()
 	{
-		me = id = element = label = title = icon = width = height = onClickHandlers = null;
 		Fit.Dom.Remove(element);
+		me = id = element = label = title = icon = width = height = onClickHandlers = null;
+
+		if (Fit.Validation.IsSet(controlId) === true)
+			delete Fit._internal.ControlBase.Controls[controlId];
 	}
 
 	init();
@@ -5523,8 +5627,14 @@ Fit.Controls.CheckBox = function(ctlId)
 	{
 		if (isIe8 === true)
 		{
-			me.AddCssClass("FitUi_Non_Existing_CheckBox_Class");
-			me.RemoveCssClass("FitUi_Non_Existing_CheckBox_Class");
+			// IE8 does not update pseudo elements properly.
+			// Changing CSS classes or content within the control
+			// is not sufficient - we actually have to remove the
+			// control temporarily from the DOM to make it update.
+
+			var elm = document.createElement("");
+			Fit.Dom.Replace(checkbox, elm);
+			Fit.Dom.Replace(elm, checkbox);
 		}
 	}
 
@@ -6688,6 +6798,9 @@ Fit.Controls.Dialog = function()
 
 		Fit.Events.AddHandler(dialog, "click", function(e)
 		{
+			if (me === null)
+				return; // Dialog was disposed when a button was clicked
+
 			if (buttons.children.length > 0 && (document.activeElement === null || Fit.Dom.Contained(dialog, document.activeElement) === false))
 				buttons.children[0].focus();
 		});
@@ -6776,12 +6889,20 @@ Fit.Controls.Dialog = function()
 	}
 
 	/// <function container="Fit.Controls.Dialog" name="Dispose" access="public">
-	/// 	<description> Destroys component to free up memory </description>
+	/// 	<description> Destroys component to free up memory, including associated buttons </description>
 	/// </function>
 	this.Dispose = function()
 	{
 		Fit.Dom.Remove(dialog);
-		Fit.Dom.Remove(layer);
+
+		if (layer !== null)
+			Fit.Dom.Remove(layer);
+
+		Fit.Array.ForEach(Fit.Array.Copy(buttons.children), function(buttonElm) // Using Copy(..) sinse Dispose() modifies children collection
+		{
+			Fit.Controls.Find(buttonElm.id).Dispose();
+		});
+
 		me = dialog = content = buttons = modal = layer = null;
 	}
 
@@ -8861,6 +8982,9 @@ Fit.Controls.PickerBase = function(controlId)
 	this.Destroy = function() // Must be overridden - remember to call base !
 	{
 		me = id = onShowHandlers = onHideHandlers = onChangingHandlers = onChangeHandlers = onCompleteHandlers = null;
+
+		if (Fit.Validation.IsSet(controlId) === true)
+			delete Fit._internal.ControlBase.Controls[controlId];
 	}
 
 	// ============================================
@@ -9856,6 +9980,8 @@ Fit.Controls.FilePicker = function(ctlId)
 			}
 			else // Legacy control
 			{
+				var enforcedOnModernBrowser = (Fit.Browser.GetInfo().Name !== "MSIE" || Fit.Browser.GetInfo().Version !== 8);
+
 				var picker = file.Input;
 
 				var iFrame = null;
@@ -9869,9 +9995,18 @@ Fit.Controls.FilePicker = function(ctlId)
 				iFrame = document.createElement("iframe");
 				iFrame.name = "iFrame" + Fit.Data.CreateGuid();
 				iFrame.style.display = "none";
-				Fit.Dom.InsertAfter(picker, iFrame);
-				iFrame.onload = function(e) // Must be registered AFTER rooting iFrame in DOM, to prevent WebKit/Chrome from firing OnLoad multiple times
+
+				if (enforcedOnModernBrowser === true)
 				{
+					// When Legacy Mode is enforced in modern browsers, the OnLoad handler MUST be registered
+					// AFTER rooting iFrame in DOM, to prevent WebKit/Chrome from firing OnLoad multiple times.
+					Fit.Dom.InsertAfter(picker, iFrame);
+				}
+
+				Fit.Events.AddHandler(iFrame, "load", function(e)
+				{
+					Fit.Browser.Log("[Legacy Mode] OnLoad fired");
+
 					// Read server response
 
 					try // Will throw an error if uploading to foreign domain, in which case ServerResponse will remain Null
@@ -9897,7 +10032,14 @@ Fit.Controls.FilePicker = function(ctlId)
 
 					if (completed.length === filesToUpload.length)
 						fireEvent(onCompletedHandlers);
-				};
+				});
+
+				if (enforcedOnModernBrowser === false)
+				{
+					// On IE8 the OnLoad handler MUST be registered BEFORE
+					// rooting iFrame in DOM, otherwise it will not be fired.
+					Fit.Dom.InsertAfter(picker, iFrame);
+				}
 
 				// Create form used to upload current file - data is posted to hidden iFrame created above
 
@@ -10139,6 +10281,7 @@ Fit.Controls.Input = function(ctlId)
 	var maximizeHeight = -1;
 	var minMaxUnit = null;
 	var mutationObserverId = -1;
+	var isIe8 = (Fit.Browser.GetInfo().Name === "MSIE" && Fit.Browser.GetInfo().Version === 8);
 
 	// ============================================
 	// Init
@@ -10163,6 +10306,12 @@ Fit.Controls.Input = function(ctlId)
 		me._internal.AddDomElement(input);
 
 		me.AddCssClass("FitUiControlInput");
+
+		me._internal.Data("multiline", "false");
+		me._internal.Data("maximizable", "false");
+		me._internal.Data("maximized", "false");
+		me._internal.Data("designmode", "false");
+
 	}
 
 	// ============================================
@@ -10235,7 +10384,7 @@ Fit.Controls.Input = function(ctlId)
 		if (designEditor !== null)
 			designEditor.destroy();
 
-		me = orgVal = preVal = input = cmdResize = designEditor = wasMultiLineBefore = minimizeHeight = maximizeHeight = minMaxUnit = mutationObserverId = null;
+		me = orgVal = preVal = input = cmdResize = designEditor = wasMultiLineBefore = minimizeHeight = maximizeHeight = minMaxUnit = mutationObserverId = isIe8 = null;
 
 		baseDispose();
 	}
@@ -10313,6 +10462,9 @@ Fit.Controls.Input = function(ctlId)
 
 				if (me.Height().Value === -1)
 					me.Height(150);
+
+				me._internal.Data("multiline", "true");
+				repaint();
 			}
 			else if (val === false && input.tagName === "TEXTAREA")
 			{
@@ -10323,6 +10475,10 @@ Fit.Controls.Input = function(ctlId)
 				{
 					me._internal.RemoveDomElement(cmdResize);
 					cmdResize = null;
+
+					me._internal.Data("maximized", "false");
+					me._internal.Data("maximizable", "false");
+					repaint();
 				}
 
 				input = document.createElement("input");
@@ -10336,6 +10492,9 @@ Fit.Controls.Input = function(ctlId)
 				me.Height(-1);
 
 				wasMultiLineBefore = false;
+
+				me._internal.Data("multiline", "false");
+				repaint();
 			}
 		}
 
@@ -10393,6 +10552,9 @@ Fit.Controls.Input = function(ctlId)
 				Fit.Dom.AddClass(cmdResize, "fa");
 				Fit.Dom.AddClass(cmdResize, "fa-chevron-down");
 				me._internal.AddDomElement(cmdResize);
+
+				me._internal.Data("maximizable", "true");
+				repaint();
 			}
 			else if (val === false && cmdResize !== null)
 			{
@@ -10403,6 +10565,9 @@ Fit.Controls.Input = function(ctlId)
 					me.Height(minimizeHeight, minMaxUnit);
 				else
 					me.MultiLine(false);
+
+				me._internal.Data("maximizable", "false"); // Also set in MultiLine(..)
+				repaint();
 			}
 		}
 
@@ -10424,12 +10589,18 @@ Fit.Controls.Input = function(ctlId)
 				me.Height(maximizeHeight, minMaxUnit, true);
 				Fit.Dom.RemoveClass(cmdResize, "fa-chevron-down");
 				Fit.Dom.AddClass(cmdResize, "fa-chevron-up");
+
+				me._internal.Data("maximized", "true");
+				repaint();
 			}
 			else if (val === false && Fit.Dom.HasClass(cmdResize, "fa-chevron-down") === false)
 			{
 				me.Height(minimizeHeight, minMaxUnit, true);
 				Fit.Dom.RemoveClass(cmdResize, "fa-chevron-up");
 				Fit.Dom.AddClass(cmdResize, "fa-chevron-down");
+
+				me._internal.Data("maximized", "false"); // Also set in MultiLine(..)
+				repaint();
 			}
 		}
 
@@ -10469,6 +10640,9 @@ Fit.Controls.Input = function(ctlId)
 						createEditor();
 					});
 				}
+
+				me._internal.Data("designmode", "true");
+				repaint();
 			}
 			else if (val === false && designEditor !== null)
 			{
@@ -10477,6 +10651,9 @@ Fit.Controls.Input = function(ctlId)
 
 				if (wasMultiLineBefore === false)
 					me.MultiLine(false);
+
+				me._internal.Data("designmode", "false");
+				repaint();
 			}
 		}
 
@@ -10604,6 +10781,15 @@ Fit.Controls.Input = function(ctlId)
 					}
 				});
 			}
+		}
+	}
+
+	function repaint()
+	{
+		if (isIe8 === true)
+		{
+			me.AddCssClass("FitUi_Non_Existing_Input_Class");
+			me.RemoveCssClass("FitUi_Non_Existing_Input_Class");
 		}
 	}
 
@@ -11310,7 +11496,7 @@ Fit.Controls.ProgressBar = function(controlId)
 		}
 	}
 
-	/// <function container="Fit.Controls.ControlBase" name="Progress" access="public" returns="integer">
+	/// <function container="Fit.Controls.ProgressBar" name="Progress" access="public" returns="integer">
 	/// 	<description> Get/set progress - a value between 0 and 100 </description>
 	/// 	<param name="val" type="integer" default="undefined"> If defined, progress is set to specified value (0-100) </param>
 	/// </function>
@@ -11341,6 +11527,18 @@ Fit.Controls.ProgressBar = function(controlId)
 	{
 		Fit.Validation.ExpectFunction(cb);
 		Fit.Array.Add(onProgressHandlers, cb);
+	}
+
+	/// <function container="Fit.Controls.ProgressBar" name="Dispose" access="public">
+	/// 	<description> Destroys control to free up memory </description>
+	/// </function>
+	this.Dispose = function()
+	{
+		Fit.Dom.Remove(element);
+		me = id = element = status = title = width = onProgressHandlers = null;
+
+		if (Fit.Validation.IsSet(controlId) === true)
+			delete Fit._internal.ControlBase.Controls[controlId];
 	}
 
 	init();
@@ -13286,7 +13484,7 @@ Fit.Controls.TreeView.Node = function(displayTitle, nodeValue)
 		}
 
 		// Dispose private members
-		elmLi = elmUl = cmdToggle = lblTitle = childrenIndexed = childrenArray = lastChild = selectable = chkSelect = chkSelectAll = null;
+		me = elmLi = elmUl = cmdToggle = chkSelectAll = chkSelect = lblTitle = childrenIndexed = childrenArray = lastChild
 	}
 
 	/// <function container="Fit.Controls.TreeView.Node" name="GetDomElement" access="public" returns="DOMElement">

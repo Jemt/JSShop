@@ -17,6 +17,11 @@ JSShop.Settings.ShippingExpenseMessage = null;
 JSShop.Settings.BasketUrl = null;
 JSShop.Settings.TermsUrl = null;
 JSShop.Settings.PaymentUrl = null;
+JSShop.Settings.PaymentMethods = null;
+/*JSShop.Settings.PaymentMethods =
+[
+	{ Title: "Credit Card - VISA, MasterCard, Dinners Club", Module: "DIBS" }
+]*/
 
 // Language
 
@@ -97,9 +102,17 @@ JSShop.GetPath = function()
 // JSShop loader
 // ======================================================
 
+JSShop._internal.Initialized = false;
+
 JSShop.Initialize = function(cb)
 {
 	Fit.Validation.ExpectFunction(cb);
+
+	if (JSShop._internal.Initialized === true)
+	{
+		cb();
+		return;
+	}
 
 	Fit.Loader.LoadScripts(
 	[
@@ -116,10 +129,17 @@ JSShop.Initialize = function(cb)
 		// Load presenters
 		{ source: JSShop.GetPath() + "/Presenters/ProductForm.js" },
 		{ source: JSShop.GetPath() + "/Presenters/ProductList.js" },
-		{ source: JSShop.GetPath() + "/Presenters/Basket.js" }
+		{ source: JSShop.GetPath() + "/Presenters/Basket.js" },
+		{ source: JSShop.GetPath() + "/Presenters/OrderForm.js" }
 	],
 	function(cfgs)
 	{
+		JSShop._internal.Initialized = true;
+
+		Fit.Language.Translations.Required = JSShop.Language.Translations.Common.Required;
+		Fit.Language.Translations.Ok = JSShop.Language.Translations.Common.Ok;
+		Fit.Language.Translations.Cancel = JSShop.Language.Translations.Common.Cancel;
+
 		cb();
 	});
 }

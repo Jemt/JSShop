@@ -153,7 +153,7 @@ JSShop.Presenters.ProductForm = function()
 		lstCategories.Width(350, "px");
 		lstCategories.DropDownMaxWidth(150, "%");
 		lstCategories.InputEnabled(true);
-		lstCategories.SetValidationCallback(function(val) { return (val.split("=")[0].length <= 50); }, lang.MaxLengthExceeded);
+		lstCategories.SetValidationCallback(function(val) { return (val.split("=")[0].length <= 50); }, JSShop.Language.Translations.Common.MaxLengthExceeded);
 		lstCategories.Required(true);
 		lstCategories.Scope("JSShopProductForm");
 		lstCategories.OnBlur(function(sender)
@@ -172,13 +172,13 @@ JSShop.Presenters.ProductForm = function()
 		txtId = new Fit.Controls.Input("JSShopProductId");
 		txtId.Width(350, "px");
 		txtId.Required(true);
-		txtId.SetValidationCallback(function(val) { return (val.length <= 30); }, lang.MaxLengthExceeded);
+		txtId.SetValidationCallback(function(val) { return (val.length <= 30); }, JSShop.Language.Translations.Common.MaxLengthExceeded);
 		txtId.Scope("JSShopProductForm");
 
 		txtTitle = new Fit.Controls.Input("JSShopProductTitle");
 		txtTitle.Width(350, "px");
 		txtTitle.Required(true);
-		txtTitle.SetValidationCallback(function(val) { return (val.length <= 250); }, lang.MaxLengthExceeded);
+		txtTitle.SetValidationCallback(function(val) { return (val.length <= 250); }, JSShop.Language.Translations.Common.MaxLengthExceeded);
 		txtTitle.Scope("JSShopProductForm");
 
 		txtDescription = new Fit.Controls.Input("JSShopProductDescription");
@@ -186,7 +186,7 @@ JSShop.Presenters.ProductForm = function()
 		txtDescription.Height(80, "px");
 		txtDescription.MultiLine(true, 300);
 		txtDescription.Maximizable(true, 250);
-		txtDescription.SetValidationCallback(function(val) { return (val.length <= 1000); }, lang.MaxLengthExceeded);
+		txtDescription.SetValidationCallback(function(val) { return (val.length <= 1000); }, JSShop.Language.Translations.Common.MaxLengthExceeded);
 		txtDescription.Scope("JSShopProductForm");
 
 		picImages = new Fit.Controls.FilePicker("JSShopProductImages");
@@ -259,8 +259,8 @@ JSShop.Presenters.ProductForm = function()
 		txtPrice = new Fit.Controls.Input("JSShopProductPrice");
 		txtPrice.Width(185, "px");
 		txtPrice.Required(true);
-		txtPrice.SetValidationCallback(function(val) { return (val.length <= 10); }, lang.MaxLengthExceeded);
-		txtPrice.SetValidationExpression(new RegExp("^([0-9]+(\\" + JSShop.Language.Translations.Locale.DecimalSeparator + "[0-9]+)?)?$"), lang.InvalidValue); // /^([0-9]+(\.[0-9]+)?)?$/
+		txtPrice.SetValidationCallback(function(val) { return (val.length <= 10); }, JSShop.Language.Translations.Common.MaxLengthExceeded);
+		txtPrice.SetValidationExpression(new RegExp("^([0-9]+(\\" + JSShop.Language.Translations.Locale.DecimalSeparator + "[0-9]+)?)?$"), JSShop.Language.Translations.Common.InvalidValue); // /^([0-9]+(\.[0-9]+)?)?$/
 		txtPrice.Scope("JSShopProductForm");
 
 		if (JSShop.Cookies.Get("PreviousCurrency") === null)
@@ -331,8 +331,8 @@ JSShop.Presenters.ProductForm = function()
 
 		txtVat = new Fit.Controls.Input("JSShopProductVat");
 		txtVat.Width(185, "px");
-		txtVat.SetValidationCallback(function(val) { return (val.length <= 10); }, lang.MaxLengthExceeded);
-		txtVat.SetValidationExpression(new RegExp("^([0-9]+(\\" + JSShop.Language.Translations.Locale.DecimalSeparator + "[0-9]+)?)?$"), lang.InvalidValue); // /^([0-9]+(\.[0-9]+)?)?$/
+		txtVat.SetValidationCallback(function(val) { return (val.length <= 10); }, JSShop.Language.Translations.Common.MaxLengthExceeded);
+		txtVat.SetValidationExpression(new RegExp("^([0-9]+(\\" + JSShop.Language.Translations.Locale.DecimalSeparator + "[0-9]+)?)?$"), JSShop.Language.Translations.Common.InvalidValue); // /^([0-9]+(\.[0-9]+)?)?$/
 		txtVat.Scope("JSShopProductForm");
 		txtVat.Value(((JSShop.Cookies.Get("PreviousVat") !== null) ? JSShop.Cookies.Get("PreviousVat") : ""));
 		txtVat.OnChange(function(sender)
@@ -342,8 +342,8 @@ JSShop.Presenters.ProductForm = function()
 
 		txtWeight = new Fit.Controls.Input("JSShopProductWeight");
 		txtWeight.Width(185, "px");
-		txtWeight.SetValidationCallback(function(val) { return (val.length <= 10); }, lang.MaxLengthExceeded);
-		txtWeight.SetValidationExpression(new RegExp("^([0-9]+(\\" + JSShop.Language.Translations.Locale.DecimalSeparator + "[0-9]+)?)?$"), lang.InvalidValue); // /^([0-9]+(\.[0-9]+)?)?$/
+		txtWeight.SetValidationCallback(function(val) { return (val.length <= 10); }, JSShop.Language.Translations.Common.MaxLengthExceeded);
+		txtWeight.SetValidationExpression(new RegExp("^([0-9]+(\\" + JSShop.Language.Translations.Locale.DecimalSeparator + "[0-9]+)?)?$"), JSShop.Language.Translations.Common.InvalidValue); // /^([0-9]+(\.[0-9]+)?)?$/
 		txtWeight.Scope("JSShopProductForm");
 
 		if (JSShop.Cookies.Get("PreviousWeightUnit") === null)
@@ -368,7 +368,7 @@ JSShop.Presenters.ProductForm = function()
 		txtDeliveryTime = new Fit.Controls.Input("JSShopProductDeliveryTime");
 		txtDeliveryTime.Width(350, "px");
 		txtDeliveryTime.Value(((JSShop.Cookies.Get("PreviousDeliveryTime") !== null) ? JSShop.Cookies.Get("PreviousDeliveryTime") : ""));
-		txtDeliveryTime.SetValidationCallback(function(val) { return (val.length <= 50); }, lang.MaxLengthExceeded);
+		txtDeliveryTime.SetValidationCallback(function(val) { return (val.length <= 50); }, JSShop.Language.Translations.Common.MaxLengthExceeded);
 		txtDeliveryTime.Scope("JSShopProductForm");
 		txtDeliveryTime.OnChange(function(sender)
 		{
@@ -400,17 +400,17 @@ JSShop.Presenters.ProductForm = function()
 			{
 				return false;
 			}
-		}, lang.InvalidValue);
-		txtDiscountExpr.SetValidationExpression(/^(.|\n){0,250}$/, lang.MaxLengthExceeded); // RegEx MaxLength: https://regex101.com/r/bY3xS9/1
+		}, JSShop.Language.Translations.Common.InvalidValue);
+		txtDiscountExpr.SetValidationExpression(/^(.|\n){0,250}$/, JSShop.Language.Translations.Common.MaxLengthExceeded); // RegEx MaxLength: https://regex101.com/r/bY3xS9/1
 		txtDiscountExpr.Scope("JSShopProductForm");
 
 		txtDiscountMsg = new Fit.Controls.Input("JSShopProductDiscountMessage");
 		txtDiscountMsg.Width(350, "px");
-		txtDiscountMsg.SetValidationCallback(function(val) { return (val.length <= 250); }, lang.MaxLengthExceeded);
+		txtDiscountMsg.SetValidationCallback(function(val) { return (val.length <= 250); }, JSShop.Language.Translations.Common.MaxLengthExceeded);
 		txtDiscountMsg.Scope("JSShopProductForm");
 
 		cmdSave = new Fit.Controls.Button("JSShopSaveButton");
-		cmdSave.Title("Save");
+		cmdSave.Title(lang.Save);
 		cmdSave.Icon("floppy-o");
 		cmdSave.Type(Fit.Controls.Button.Type.Success);
 		cmdSave.OnClick(function(sender)
@@ -422,7 +422,7 @@ JSShop.Presenters.ProductForm = function()
 
 			if (Fit.Controls.ValidateAll("JSShopProductForm") === false)
 			{
-				alert(lang.InvalidValues);
+				Fit.Controls.Dialog.Alert(JSShop.Language.Translations.Common.InvalidEntries);
 				return;
 			}
 
@@ -478,8 +478,11 @@ JSShop.Presenters.ProductForm = function()
 		cmdDelete.GetDomElement().style.display = "none";
 		cmdDelete.OnClick(function(sender)
 		{
-			if (confirm(lang.DeleteWarning) === true)
+			Fit.Controls.Dialog.Confirm(lang.DeleteWarning, function(res)
 			{
+				if (res === false)
+					return;
+
 				imagesRemoved = ((currentModel.Images() !== "") ? currentModel.Images().split(";") : []);
 				removeImages(function()
 				{
@@ -492,7 +495,7 @@ JSShop.Presenters.ProductForm = function()
 						populatePickers(); // Update pickers (products drop down and categories drop down)
 					});
 				});
-			}
+			});
 		});
 	}
 
@@ -723,7 +726,7 @@ JSShop.Presenters.ProductForm = function()
 		});
 		req.OnFailure(function(sender)
 		{
-			alert(lang.ImagesNotRemoved);
+			Fit.Controls.Dialog.Alert(lang.ImagesNotRemoved);
 			cb();
 		});
 		req.Start();
