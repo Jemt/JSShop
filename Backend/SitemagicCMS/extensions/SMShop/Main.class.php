@@ -65,7 +65,7 @@ class SMShop extends SMExtension
 		SMEnvironment::GetMasterTemplate()->RegisterResource(SMTemplateResource::$StyleSheet, SMExtensionManager::GetExtensionPath($this->name) . "/JSShop/Fit.UI/Fit.UI.css", true);
 		SMEnvironment::GetMasterTemplate()->RegisterResource(SMTemplateResource::$JavaScript, SMExtensionManager::GetExtensionPath($this->name) . "/JSShop/JSShop.js");
 
-		// Configure JSShop
+		// Prepare callbacks
 
 		$basePath = SMEnvironment::GetInstallationPath(); // Use full path to prevent problems when calling WebServices under /shop/XYZ which would be redirected to / without preserving POST data (htaccess)
 		$basePath .= (($basePath !== "/") ? "/" : "");
@@ -74,11 +74,39 @@ class SMShop extends SMExtension
 		$fsCallback = $basePath . SMExtensionManager::GetCallbackUrl($this->name, "Callbacks/Files");
 		$payCallback = $basePath . SMExtensionManager::GetCallbackUrl($this->name, "Callbacks/Payment");
 
+		// Prepare language
+
 		$langCode = SMLanguageHandler::GetSystemLanguage();
 		$shopLang = ((SMFileSystem::FileExists(dirname(__FILE__) . "/JSShop/Languages/" . $langCode . ".js") === true) ? $langCode : "en");
 
+		// Prepare cookie store
+
 		$cookiePrefix = ((SMEnvironment::IsSubSite() === false) ? "SMRoot" : ""); // Prevent cookies on root site from causing naming conflicts with cookies on subsites
 		$cookiePath = SMEnvironment::GetInstallationPath(); // Prevent /shop virtual directory from being used as cookie path when adding products to basket by forcing cookie path
+
+		// Prepare payment modules
+
+		$paymentMethodsStr = ((SMAttributes::GetAttribute("SMShopPaymentMethods") !== null) ? SMAttributes::GetAttribute("SMShopPaymentMethods") : "");
+
+		if ($paymentMethodsStr !== "")
+		{
+			$paymentMethods = explode(";", $paymentMethodsStr);
+			$paymentMethodsStr = "";
+			$paymentModule = null;
+
+			foreach ($paymentMethods as $pm)
+			{
+				$paymentModule = explode("=", $pm); // 0 = PSPI module name, 1 = title
+
+				if (count($paymentModule) !== 2)
+					continue; // Not valid
+
+				$paymentMethodsStr .= (($paymentMethodsStr !== "") ? ", " : "");
+				$paymentMethodsStr .= "{ Module: '" . $paymentModule[0] . "', Title: '" . $paymentModule[1] . "' }";
+			}
+		}
+
+		// Configure JSShop
 
 		$jsInit = "
 		<script type=\"text/javascript\">
@@ -88,6 +116,7 @@ class SMShop extends SMExtension
 		JSShop.Settings.BasketUrl = \"" . SMExtensionManager::GetExtensionUrl($this->name) . "&SMShopBasket" . "\";
 		JSShop.Settings.TermsUrl = \"" . ((SMAttributes::GetAttribute("SMShopTermsPage") !== null) ? SMAttributes::GetAttribute("SMShopTermsPage") : "") . "\";
 		JSShop.Settings.PaymentUrl = \"" . $payCallback . "\";
+		JSShop.Settings.PaymentMethods = [ " . $paymentMethodsStr . " ];
 
 		JSShop.Language.Name = \"" . $shopLang . "\";
 

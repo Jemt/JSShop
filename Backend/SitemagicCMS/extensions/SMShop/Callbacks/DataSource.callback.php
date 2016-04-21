@@ -91,6 +91,7 @@ $dataSourcesAllowed = array
 			"City"					=> array("DataType" => "string", "MaxLength" => 50*8),
 			"Email"					=> array("DataType" => "string", "MaxLength" => 50*8),
 			"Phone"					=> array("DataType" => "string", "MaxLength" => 20),
+			"Message"				=> array("DataType" => "string", "MaxLength" => 250*8),
 			"AltCompany"			=> array("DataType" => "string", "MaxLength" => 50*8),
 			"AltFirstName"			=> array("DataType" => "string", "MaxLength" => 50*8),
 			"AltLastName"			=> array("DataType" => "string", "MaxLength" => 50*8),
@@ -114,6 +115,7 @@ $dataSourcesAllowed = array
 			"Functions"				=> array
 			(
 				"Create"				=> "SMShopProcessNewOrder", 	// Receives SMKeyValueCollection item
+				"CreateCompleted"		=> "SMShopFinalizeNewOrder", 	// Receives SMKeyValueCollection item
 				"Retrieve"				=> null,						// Receives SMKeyValueCollection item
 				"RetrieveAll"			=> null,						// Receives array of SMKeyValueCollection items
 				"Update"				=> null,						// Receives SMKeyValueCollection item
@@ -362,6 +364,12 @@ if ($command === "Create")
 	$ds->Insert($item);
 	$ds->Commit();
 
+	if (isset($dsDef["Callbacks"]) === true && isset($dsDef["Callbacks"]["Functions"]["CreateCompleted"]) === true)
+	{
+		require_once($dsDef["Callbacks"]["File"]);
+		$dsDef["Callbacks"]["Functions"]["CreateCompleted"]($item);
+	}
+
 	echo SMShopDataItemToJson($dsDef, $props, $item); // Return updated data to client (UTF8 encoded)
 }
 else if ($command === "Retrieve")
@@ -427,6 +435,12 @@ else if ($command === "Update")
 	$ds->Update($item, "Id = '" . $ds->Escape($props["Id"]) . "'");
 	$ds->Commit();
 
+	if (isset($dsDef["Callbacks"]) === true && isset($dsDef["Callbacks"]["Functions"]["UpdateCompleted"]) === true)
+	{
+		require_once($dsDef["Callbacks"]["File"]);
+		$dsDef["Callbacks"]["Functions"]["UpdateCompleted"]($item);
+	}
+
 	SMShopDataItemToJson($dsDef, $props, $item); // Return updated data to client (UTF8 encoded)
 }
 else if ($command === "Delete")
@@ -439,6 +453,12 @@ else if ($command === "Delete")
 
 	$ds->Delete("Id = '" . $ds->Escape($props["Id"]) . "'");
 	$ds->Commit();
+
+	if (isset($dsDef["Callbacks"]) === true && isset($dsDef["Callbacks"]["Functions"]["DeleteCompleted"]) === true)
+	{
+		require_once($dsDef["Callbacks"]["File"]);
+		$dsDef["Callbacks"]["Functions"]["DeleteCompleted"]($ds->Escape($props["Id"]));
+	}
 }
 
 ?>

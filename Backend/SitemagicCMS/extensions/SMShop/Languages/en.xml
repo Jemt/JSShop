@@ -2,13 +2,19 @@
 <entries>
 	<entry key="Title" value="Webshop" />
 	<entry key="Description" value="Promote and sell your products online" />
-
 	<entry key="Products" value="Products" />
 
+	<!-- Shop (buy products) -->
 	<entry key="Overview" value="Overview" />
 	<entry key="NoProducts" value="No products" />
 	<entry key="Buy" value="Buy" />
 	<entry key="ReadMore" value="Read more" />
 
+	<!-- Basket -->
 	<entry key="Basket" value="Basket" />
+
+	<!-- Confirmation mail -->
+	<entry key="ConfirmationTitle" value="Confirmation of purchase" />
+	<entry key="DecimalSeparator" value="." />
+	<entry key="Shipping" value="Shipping" />
 </entries>

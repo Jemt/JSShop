@@ -38,6 +38,13 @@ if ($operation === null) // Step 1: Redirect to payment window
 	$orderId = SMEnvironment::GetQueryValue("OrderId");
 	$order = getOrder($orderId);
 
+	if ($order["State"] !== "Initial")
+	{
+		header("HTTP/1.1 500 Internal Server Error");
+		echo "Order with ID '" . $orderId . "' has already been processed";
+		exit;
+	}
+
 	$amount = (int)round(((float)$order["Price"] + (float)$order["Vat"]) * 100); // Amount in smallest possible unit (e.g. USD 10095 = USD 100.95)
 	$currency = $order["Currency"];
 

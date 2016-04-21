@@ -246,4 +246,95 @@ function SMShopProcessNewOrder(SMKeyValueCollection $order)
 	$order["State"] = "Initial";
 }
 
+function SMShopFinalizeNewOrder(SMKeyValueCollection $order)
+{
+	$mailAddress = $order["Email"];
+	$title = SMAttributes::GetAttribute("SMShopOrderConfirmationMailTitle");
+	$content = SMAttributes::GetAttribute("SMShopOrderConfirmationMailContent");
+
+	if ($content === null || $content === "" || SMStringUtilities::Validate($mailAddress, SMValueRestriction::$EmailAddress) === false)
+		return;
+
+	$lang = new SMLanguageHandler(SMExtensionManager::GetExecutingExtension());
+
+	$eDs = new SMDataSource("SMShopOrderEntries");
+	$pDs = new SMDataSource("SMShopProducts");
+
+	// Order details
+
+	$entries = $eDs->Select("*", "OrderId = '" . $eDs->Escape($order["Id"]) . "'");
+	$products = null;
+
+	$orderDetails = "";
+	foreach ($entries as $entry)
+	{
+		$products = $pDs->Select("*", "Id = '" . $pDs->Escape($entry["ProductId"]) . "'");
+
+		if (count($products) === 0) // Very unlikely to happen - but theoretically a product could be removed while placing an order
+		{
+			header("HTTP/1.1 500 Internal Server Error");
+			echo "Product could not be found";
+			exit;
+		}
+
+		$orderDetails .= (($orderDetails !== "") ? "<br>" : "");
+		$orderDetails .= $entry["Units"] . " x " . $products[0]["Title"] . ", " . $order["Currency"] . " " . number_format((((int)$entry["Units"] * (float)$entry["UnitPrice"]) - (float)$entry["Discount"]) * (((float)$entry["Vat"] / 100) + 1), 2, $lang->GetTranslation("DecimalSeparator"), "");
+	}
+
+	// Shipping expense
+
+	if ($order["ShippingExpense"] !== "0")
+	{
+		$orderDetails .= "<br>";
+		$orderDetails .= (($order["ShippingMessage"] !== "") ? $order["ShippingMessage"] : $lang->GetTranslation("Shipping")) . ", " . $order["Currency"] . " " . number_format((float)$order["ShippingExpense"] + (float)$order["ShippingVat"], 2, $lang->GetTranslation("DecimalSeparator"), "");
+	}
+
+	// Mail content - replace place holders
+
+	$content = str_replace("{Company}", $order["Company"], $content);
+	$content = str_replace("{FirstName}", $order["FirstName"], $content);
+	$content = str_replace("{LastName}", $order["LastName"], $content);
+	$content = str_replace("{Address}", $order["Address"], $content);
+	$content = str_replace("{ZipCode}", $order["ZipCode"], $content);
+	$content = str_replace("{City}", $order["City"], $content);
+	$content = str_replace("{Phone}", $order["Phone"], $content);
+	$content = str_replace("{Email}", $order["Email"], $content);
+	$content = str_replace("{Message}", nl2br($order["Message"]), $content);
+	$content = str_replace("{AltCompany}", $order["AltCompany"], $content);
+	$content = str_replace("{AltFirstName}", $order["AltFirstName"], $content);
+	$content = str_replace("{AltLastName}", $order["AltLastName"], $content);
+	$content = str_replace("{AltAddress}", $order["AltAddress"], $content);
+	$content = str_replace("{AltZipCode}", $order["AltZipCode"], $content);
+	$content = str_replace("{AltCity}", $order["AltCity"], $content);
+	$content = str_replace("{DeliveryCompany}", (($order["AltAddress"] !== "") ? $order["AltCompany"] : $order["Company"]), $content); // Use AltCompany (which is optional) only if AltAddress is set
+	$content = str_replace("{DeliveryFirstName}", (($order["AltFirstName"] !== "") ? $order["AltFirstName"] : $order["FirstName"]), $content);
+	$content = str_replace("{DeliveryLastName}", (($order["AltLastName"] !== "") ? $order["AltLastName"] : $order["LastName"]), $content);
+	$content = str_replace("{DeliveryAddress}", (($order["AltAddress"] !== "") ? $order["AltAddress"] : $order["Address"]), $content);
+	$content = str_replace("{DeliveryZipCode}", (($order["AltZipCode"] !== "") ? $order["AltZipCode"] : $order["ZipCode"]), $content);
+	$content = str_replace("{DeliveryCity}", (($order["AltCity"] !== "") ? $order["AltCity"] : $order["City"]), $content);
+	$content = str_replace("{OrderId}", $order["Id"], $content);
+	$content = str_replace("{Currency}", $order["Currency"], $content);
+	$content = str_replace("{Vat}", number_format((float)$order["Vat"], 2, $lang->GetTranslation("DecimalSeparator"), ""), $content);
+	$content = str_replace("{Price}", number_format((float)$order["Price"] + (float)$order["Vat"], 2, $lang->GetTranslation("DecimalSeparator"), ""), $content);
+	$content = str_replace("{Weight}", number_format((float)$order["Weight"], 2, $lang->GetTranslation("DecimalSeparator"), ""), $content);
+	$content = str_replace("{WeightUnit}", $order["WeightUnit"], $content);
+	$content = str_replace("{ShippingExpense}", number_format((float)$order["ShippingExpense"], 2, $lang->GetTranslation("DecimalSeparator"), ""), $content);
+	$content = str_replace("{ShippingVat}", number_format((float)$order["ShippingVat"], 2, $lang->GetTranslation("DecimalSeparator"), ""), $content);
+	$content = str_replace("{ShippingMessage}", $order["ShippingMessage"], $content);
+	$content = str_replace("{DateYear}", date("Y"), $content);
+	$content = str_replace("{DateMonth}", date("m"), $content);
+	$content = str_replace("{DateDay}", date("d"), $content);
+	$content = str_replace("{OrderDetails}", $orderDetails, $content);
+
+	$mail = new SMMail();
+	$mail->AddRecipient($mailAddress);
+	$mail->SetSubject((($title !== null && $title !== "") ? $title : $lang->GetTranslation("ConfirmationTitle")));
+	$mail->SetContent($content);
+
+	if (SMAttributes::GetAttribute("SMShopEmail") !== null && SMAttributes::GetAttribute("SMShopEmail") !== "" && SMStringUtilities::Validate(SMAttributes::GetAttribute("SMShopEmail"), SMValueRestriction::$EmailAddress) === true)
+		$mail->SetSender(SMAttributes::GetAttribute("SMShopEmail"));
+
+	$mail->Send();
+}
+
 ?>
